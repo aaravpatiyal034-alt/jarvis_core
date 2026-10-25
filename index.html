@@ -2,430 +2,330 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>E.V. Suit OS | Spider-Man: Brand New Day</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      overflow: hidden;
-      background-color: #060913;
-      font-family: 'Segoe UI', Roboto, sans-serif;
-      user-select: none;
-      width: 100vw; height: 100vh;
-      position: relative;
-    }
-    #canvas-container {
-      position: absolute; top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      z-index: 1; touch-action: none;
-    }
-    #status-hud {
-      position: absolute; top: 16px; left: 50%;
-      transform: translateX(-50%); z-index: 9999;
-      background: rgba(6, 12, 26, 0.92);
-      border: 1px solid #ff3344;
-      padding: 8px 18px; border-radius: 20px;
-      backdrop-filter: blur(12px); color: #ff3344;
-      font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
-      text-transform: uppercase; box-shadow: 0 0 18px rgba(255, 51, 68, 0.35);
-      display: flex; align-items: center; gap: 10px;
-      transition: all 0.3s ease;
-    }
-    #status-indicator {
-      width: 8px; height: 8px; border-radius: 50%;
-      background-color: #ff3344; box-shadow: 0 0 8px #ff3344;
-    }
-    #control-bar {
-      position: absolute; top: 58px; left: 50%;
-      transform: translateX(-50%); z-index: 9999;
-      display: flex; gap: 6px; width: 92%; max-width: 440px;
-    }
-    #api-input {
-      flex: 1; background: rgba(6, 12, 26, 0.92); border: 1px solid rgba(255, 51, 68, 0.4);
-      border-radius: 10px; color: #fff; padding: 7px 10px; font-size: 11px;
-      outline: none;
-    }
-    .hud-btn {
-      background: rgba(255, 51, 68, 0.2); border: 1px solid #ff3344;
-      color: #ff3344; border-radius: 10px; padding: 7px 12px; font-size: 10px;
-      cursor: pointer; font-weight: bold; text-transform: uppercase;
-      backdrop-filter: blur(8px);
-    }
-    #workspace-panel {
-      position: absolute; top: 100px; left: 50%;
-      transform: translateX(-50%); width: 94%; max-width: 600px;
-      max-height: 55vh; z-index: 9998;
-      background: rgba(8, 14, 28, 0.96); border: 1px solid #ff3344;
-      border-radius: 14px; padding: 14px; color: #e2e8f0;
-      backdrop-filter: blur(18px); box-shadow: 0 0 35px rgba(255, 51, 68, 0.25);
-      overflow-y: auto; display: none; font-size: 12px; line-height: 1.5;
-    }
-    #workspace-panel pre {
-      background: rgba(2, 6, 14, 0.85); border: 1px solid rgba(0, 229, 255, 0.4);
-      border-radius: 8px; padding: 10px; overflow-x: auto;
-      color: #00e5ff; font-family: monospace; font-size: 11px;
-      margin-top: 8px; white-space: pre-wrap; word-break: break-all;
-    }
-    #hud {
-      position: absolute; bottom: 25px; left: 50%;
-      transform: translateX(-50%); z-index: 9999; text-align: center;
-      width: 90%;
-    }
-    #micBtn {
-      background: rgba(255, 51, 68, 0.15); border: 2px solid #ff3344;
-      color: #ff3344; padding: 14px 20px; font-size: 12px;
-      font-weight: bold; letter-spacing: 1.2px; border-radius: 30px;
-      box-shadow: 0 0 22px rgba(255, 51, 68, 0.35); backdrop-filter: blur(10px);
-      outline: none; cursor: pointer; width: 100%; max-width: 350px;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>E.V. • Spider-Man Mobile AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+    body { width: 100vw; height: 100dvh; overflow: hidden; background: #030611; color: #e2e8f0; font-family: system-ui, sans-serif; position: fixed; }
+    #canvas-container { position: absolute; inset: 0; z-index: 1; touch-action: none; }
+    .hud-overlay { position: absolute; inset: 0; z-index: 2; pointer-events: none; background: radial-gradient(circle at 50% 45%, transparent 30%, #030611 92%); }
+  </style>
 </head>
-<body>
+<body class="flex flex-col justify-between p-3 max-w-md mx-auto">
 
+  <!-- 3D HOLOGRAPHIC ORB -->
   <div id="canvas-container"></div>
+  <div class="hud-overlay"></div>
 
-  <div id="status-hud">
-    <div id="status-indicator"></div>
-    <span id="status-text">E.V. ONLINE • STANDBY</span>
-  </div>
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed top-3 left-1/2 -translate-x-1/2 z-50 opacity-0 pointer-events-none transition-all duration-300 bg-[#050b1a]/95 border border-[#ff1744] text-cyan-200 text-[11px] font-bold px-4 py-1.5 rounded-full shadow-lg"></div>
 
-  <div id="control-bar">
-    <input type="password" id="api-input" placeholder="Paste Groq Key (gsk_...)" />
-    <button class="hud-btn" id="save-key-btn">SAVE</button>
-    <button class="hud-btn" id="download-btn" style="display:none;">SAVE CODE</button>
-  </div>
-
-  <div id="workspace-panel">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h3 id="panel-title" style="color:#00e5ff; font-size:13px;">🕸️ TACTICAL HUD WORKSPACE</h3>
-      <button class="hud-btn" onclick="document.getElementById('workspace-panel').style.display='none'">CLOSE</button>
+  <!-- TOP BAR: STATUS + API KEY -->
+  <header class="relative z-10 flex flex-col gap-2">
+    <div class="flex items-center gap-1.5">
+      <div id="status-hud" class="flex-1 bg-[#040b18]/90 border border-[#ff1744] px-3 py-1.5 rounded-full flex items-center gap-2 backdrop-blur-md">
+        <span id="dot" class="w-2 h-2 rounded-full bg-[#ff1744] shadow-[0_0_8px_#ff1744]"></span>
+        <span id="status-text" class="text-[11px] font-bold tracking-wider uppercase truncate">E.V. OPTICS OFFLINE</span>
+      </div>
+      <button id="mode-btn" class="bg-[#040b18]/90 border border-cyan-400/60 text-cyan-300 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase">PATROL</button>
+      <button id="key-toggle" class="bg-[#040b18]/90 border border-[#ff1744]/70 text-[#ff1744] px-3 py-1.5 rounded-full text-[10px] font-bold uppercase">KEY</button>
     </div>
-    <div id="workspace-content" style="margin-top:8px;"></div>
-  </div>
 
-  <div id="hud">
-    <button id="micBtn">TAP TO CONNECT WITH E.V.</button>
-  </div>
+    <div id="key-bar" class="hidden flex gap-1.5 bg-[#040b18]/95 border border-cyan-500/40 p-2 rounded-xl">
+      <input id="api-input" type="password" placeholder="Paste Groq Key (gsk_...)" class="flex-1 bg-black/60 border border-cyan-500/30 rounded-lg px-2.5 py-1 text-xs text-white outline-none">
+      <button id="save-btn" class="bg-[#ff1744] text-white text-[10px] font-bold px-3 py-1 rounded-lg uppercase">SAVE</button>
+      <button id="export-btn" class="hidden bg-cyan-500 text-black text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase">MD</button>
+    </div>
+  </header>
+
+  <!-- CENTER WORKSPACE & SUBTITLES -->
+  <main class="relative z-10 flex flex-col justify-end gap-2 pointer-events-none my-auto w-full">
+    <div id="workspace" class="hidden pointer-events-auto max-h-[36dvh] bg-[#030916]/95 border border-[#ff1744] rounded-xl p-3 overflow-y-auto text-xs">
+      <div class="flex justify-between items-center mb-1.5 pb-1 border-b border-white/10">
+        <span class="text-[#ff1744] font-bold text-[11px] tracking-wider">🕸️ TACTICAL MATRIX</span>
+        <button onclick="document.getElementById('workspace').classList.add('hidden')" class="text-[10px] text-cyan-300 bg-white/10 px-2 py-0.5 rounded">HIDE</button>
+      </div>
+      <div id="workspace-body" class="space-y-1.5 text-[11px]"></div>
+    </div>
+
+    <div class="pointer-events-auto bg-[#040b18]/85 border border-cyan-500/30 rounded-xl p-2.5 backdrop-blur-md">
+      <div class="flex justify-between text-[9px] font-bold tracking-widest text-[#ff1744] uppercase mb-0.5">
+        <span>SUIT MK-V // E.V. AI</span>
+        <span id="sub-badge" class="text-cyan-400">STANDBY</span>
+      </div>
+      <p id="subtitle" class="text-xs text-slate-100 line-clamp-2">"Tap below to link mask neural optics, Peter."</p>
+    </div>
+  </main>
+
+  <!-- BOTTOM CONTROLS -->
+  <footer class="relative z-10 flex flex-col gap-2">
+    <div class="flex gap-1.5 overflow-x-auto pb-0.5">
+      <button data-q="Calibrate my web-shooter targeting matrix" class="chip shrink-0 bg-[#050d1f]/90 border border-cyan-500/40 text-cyan-300 px-2.5 py-1 rounded-full text-[10px]">🎯 Target Matrix</button>
+      <button data-q="Scan Queens NYPD band for emergencies" class="chip shrink-0 bg-[#050d1f]/90 border border-[#ff1744]/40 text-rose-300 px-2.5 py-1 rounded-full text-[10px]">🚨 NYPD Scan</button>
+      <button data-q="Tactical mode: write a Python web-swing physics script" class="chip shrink-0 bg-[#050d1f]/90 border border-cyan-500/40 text-cyan-300 px-2.5 py-1 rounded-full text-[10px]">💻 Swing Code</button>
+    </div>
+
+    <div class="flex gap-1.5">
+      <button id="micBtn" class="flex-1 bg-gradient-to-r from-[#ff1744]/30 to-cyan-500/30 border-2 border-[#ff1744] text-white py-3 rounded-full text-xs font-bold tracking-widest uppercase shadow-[0_0_20px_rgba(255,23,68,0.3)] active:scale-95 transition">
+        TAP TO LINK E.V.
+      </button>
+      <button id="chat-toggle" class="bg-[#050d1f] border border-cyan-400/60 text-cyan-300 px-3.5 rounded-full text-xs">⌨️</button>
+    </div>
+
+    <form id="chat-form" class="hidden flex gap-1.5">
+      <input id="chat-input" type="text" placeholder="Ask E.V. anything..." class="flex-1 bg-[#040b18] border border-cyan-400/50 rounded-full px-3 py-2 text-xs text-white outline-none">
+      <button class="bg-[#ff1744] text-white text-[10px] font-bold px-3.5 rounded-full uppercase">SEND</button>
+    </form>
+  </footer>
 
   <script>
-    let GROQ_API_KEY = (localStorage.getItem('jarvis_groq_key') || "").trim();
-    let currentResearchData = "";
+    let GROQ_KEY = (localStorage.getItem('ev_groq_key') || localStorage.getItem('jarvis_groq_key') || "").trim();
+    let state = "OFF", mode = "PATROL", lastOutput = "", memory = [];
 
-    const STATE = { OFF: "OFF", STANDBY: "STANDBY", LISTENING: "LISTENING", THINKING: "THINKING", SPEAKING: "SPEAKING" };
-    const MODE = { STANDARD: "STANDARD", SERIOUS: "SERIOUS" };
-    
-    let currentState = STATE.OFF;
-    let currentMode = MODE.STANDARD;
-    let chatMemory = [];
+    const $ = id => document.getElementById(id);
+    $('api-input').value = GROQ_KEY;
 
-    const apiInput = document.getElementById('api-input');
-    const downloadBtn = document.getElementById('download-btn');
-    apiInput.value = GROQ_API_KEY;
+    function toast(msg) {
+      const t = $('toast');
+      t.innerText = msg;
+      t.classList.remove('opacity-0');
+      setTimeout(() => t.classList.add('opacity-0'), 2500);
+    }
 
-    document.getElementById('save-key-btn').addEventListener('click', () => {
-      GROQ_API_KEY = apiInput.value.replace(/[^a-zA-Z0-9_-]/g, "");
-      localStorage.setItem('jarvis_groq_key', GROQ_API_KEY);
-      playAudioFx('wake');
-      document.getElementById('status-text').innerText = "LINK ESTABLISHED";
-      alert("Key saved successfully.");
+    $('key-toggle').onclick = () => $('key-bar').classList.toggle('hidden');
+    $('chat-toggle').onclick = () => $('chat-form').classList.toggle('hidden');
+
+    $('save-btn').onclick = () => {
+      GROQ_KEY = $('api-input').value.replace(/[^a-zA-Z0-9_-]/g, "");
+      localStorage.setItem('ev_groq_key', GROQ_KEY);
+      $('key-bar').classList.add('hidden');
+      beep(880, 0.12);
+      toast("Neural Key Saved");
+    };
+
+    $('export-btn').onclick = () => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([lastOutput], { type: 'text/markdown' }));
+      a.download = `ev_log_${Date.now()}.md`;
+      a.click();
+    };
+
+    $('mode-btn').onclick = () => {
+      mode = mode === "PATROL" ? "TACTICAL" : "PATROL";
+      $('mode-btn').innerText = mode;
+      $('workspace').classList.toggle('hidden', mode === "PATROL");
+      setHud(state);
+    };
+
+    document.querySelectorAll('.chip').forEach(b => b.onclick = () => {
+      if (b.dataset.q.includes("Tactical")) { mode = "TACTICAL"; $('mode-btn').innerText = mode; }
+      askEV(b.dataset.q);
     });
 
-    downloadBtn.addEventListener('click', () => {
-      if (!currentResearchData) return;
-      const blob = new Blob([currentResearchData], { type: 'text/markdown' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `ev_tactical_data_${Date.now()}.md`;
-      link.click();
-    });
+    $('chat-form').onsubmit = e => {
+      e.preventDefault();
+      const q = $('chat-input').value.trim();
+      if (q) { $('chat-input').value = ""; askEV(q); }
+    };
 
-    let scene, camera, renderer, globe, basePositions;
+    // --- 3D SPIDER-CORE ---
+    let scene, camera, renderer, core, particles, ring, basePos;
     const clock = new THREE.Clock();
 
     function init3D() {
+      const box = $('canvas-container');
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 100);
+      camera.position.set(0, 0.05, 2.5);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      box.appendChild(renderer.domElement);
+
+      const grid = new THREE.GridHelper(6, 20, 0xff1744, 0x002b44);
+      grid.position.y = -1.2;
+      scene.add(grid);
+
+      const geo = new THREE.IcosahedronGeometry(0.62, 3);
+      basePos = geo.attributes.position.array.slice();
+      core = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xff1744, wireframe: true, transparent: true, opacity: 0.8 }));
+      scene.add(core);
+
+      particles = new THREE.Points(
+        new THREE.SphereGeometry(0.78, 26, 26),
+        new THREE.PointsMaterial({ color: 0x00e5ff, size: 0.028 })
+      );
+      scene.add(particles);
+
+      ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.98, 0.008, 12, 80),
+        new THREE.MeshBasicMaterial({ color: 0x00e5ff })
+      );
+      ring.rotation.x = 1.1;
+      scene.add(ring);
+
+      let drag = false, lx = 0, ly = 0, vx = 0, vy = 0;
+      box.addEventListener('touchstart', e => { drag = true; lx = e.touches[0].clientX; ly = e.touches[0].clientY; }, { passive: true });
+      box.addEventListener('touchmove', e => {
+        if (!drag) return;
+        vy = (e.touches[0].clientX - lx) * 0.006;
+        vx = (e.touches[0].clientY - ly) * 0.006;
+        lx = e.touches[0].clientX; ly = e.touches[0].clientY;
+      }, { passive: true });
+      box.addEventListener('touchend', () => drag = false);
+
+      (function animate() {
+        requestAnimationFrame(animate);
+        const t = clock.getElapsedTime();
+        const speed = state === "THINKING" ? 0.035 : (state === "SPEAKING" ? 0.015 : 0.004);
+
+        core.rotation.y += vy + speed;
+        core.rotation.x += vx;
+        particles.rotation.y -= vy + speed * 0.7;
+        ring.rotation.z += 0.01;
+        vx *= 0.92; vy *= 0.92;
+
+        const pos = core.geometry.attributes.position;
+        const amp = state === "SPEAKING" ? 0.1 : (state === "THINKING" ? 0.04 : 0.015);
+        for (let i = 0; i < pos.count; i++) {
+          const w = 1 + Math.sin(t * 9 + basePos[i * 3] * 5) * amp;
+          pos.setXYZ(i, basePos[i * 3] * w, basePos[i * 3 + 1] * w, basePos[i * 3 + 2] * w);
+        }
+        pos.needsUpdate = true;
+        core.material.color.setHex(state === "LISTENING" ? 0x00e5ff : 0xff1744);
+        renderer.render(scene, camera);
+      })();
+    }
+
+    // --- AUDIO & SPEECH ---
+    const actx = new (window.AudioContext || window.webkitAudioContext)();
+    function beep(freq = 640, dur = 0.15) {
       try {
-        const container = document.getElementById('canvas-container');
-        scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 0.2, 2.5);
-
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        container.appendChild(renderer.domElement);
-
-        // Web-like grid ground
-        const gridFloor = new THREE.GridHelper(6, 24, 0xff3344, 0x003366);
-        gridFloor.position.y = -1.2;
-        scene.add(gridFloor);
-
-        // Core holographic sphere
-        const globeGeo = new THREE.SphereGeometry(0.8, 28, 28);
-        basePositions = globeGeo.attributes.position.array.slice();
-        const globeMat = new THREE.MeshBasicMaterial({ color: 0xff3344, wireframe: true, transparent: true, opacity: 0.85 });
-        globe = new THREE.Mesh(globeGeo, globeMat);
-        scene.add(globe);
-
-        let isDragging = false, lastTouchX = 0, lastTouchY = 0, velX = 0, velY = 0;
-        container.addEventListener('touchstart', (e) => {
-          if (e.touches.length === 1) { isDragging = true; lastTouchX = e.touches[0].clientX; lastTouchY = e.touches[0].clientY; }
-        }, { passive: true });
-
-        container.addEventListener('touchmove', (e) => {
-          if (!isDragging || e.touches.length !== 1) return;
-          const dx = e.touches[0].clientX - lastTouchX;
-          const dy = e.touches[0].clientY - lastTouchY;
-          velY = dx * 0.005; velX = dy * 0.005;
-          lastTouchX = e.touches[0].clientX; lastTouchY = e.touches[0].clientY;
-        }, { passive: true });
-        container.addEventListener('touchend', () => isDragging = false);
-
-        function animate() {
-          requestAnimationFrame(animate);
-          const elapsedTime = clock.getElapsedTime();
-          let themeColor = currentMode === MODE.SERIOUS ? 0x00e5ff : 0xff3344;
-
-          globe.rotation.y += velY + (currentState === STATE.THINKING ? 0.025 : 0.003);
-          globe.rotation.x += velX;
-          velX *= 0.92; velY *= 0.92;
-
-          if (currentState === STATE.SPEAKING) {
-            const pos = globe.geometry.attributes.position;
-            for (let i = 0; i < pos.count; i++) {
-              const wave = Math.sin(elapsedTime * 9 + basePositions[i*3]*6 + basePositions[i*3+1]*6) * 0.07;
-              pos.setXYZ(i, basePositions[i*3]*(1+wave), basePositions[i*3+1]*(1+wave), basePositions[i*3+2]*(1+wave));
-            }
-            pos.needsUpdate = true;
-          } else {
-            const pos = globe.geometry.attributes.position;
-            for (let i = 0; i < pos.count; i++) pos.setXYZ(i, basePositions[i*3], basePositions[i*3+1], basePositions[i*3+2]);
-            pos.needsUpdate = true;
-          }
-
-          globe.material.color.setHex(themeColor);
-          renderer.render(scene, camera);
-        }
-        animate();
-      } catch (e) {
-        console.error("Three.js setup error:", e);
-      }
+        if (actx.state === 'suspended') actx.resume();
+        const o = actx.createOscillator(), g = actx.createGain();
+        o.connect(g); g.connect(actx.destination);
+        o.frequency.setValueAtTime(freq, actx.currentTime);
+        g.gain.setValueAtTime(0.12, actx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + dur);
+        o.start(); o.stop(actx.currentTime + dur);
+      } catch (e) {}
     }
 
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playAudioFx(type) {
-      try {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        const now = audioCtx.currentTime;
-        if (type === 'wake') {
-          osc.frequency.setValueAtTime(520, now); osc.frequency.exponentialRampToValueAtTime(1040, now + 0.15);
-          gain.gain.setValueAtTime(0.12, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
-          osc.start(now); osc.stop(now + 0.25);
-        } else if (type === 'standby') {
-          osc.frequency.setValueAtTime(700, now); osc.frequency.exponentialRampToValueAtTime(380, now + 0.2);
-          gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-          osc.start(now); osc.stop(now + 0.2);
-        }
-      } catch(e) {}
+    function speak(text, next = "LISTENING") {
+      speechSynthesis.cancel();
+      if (rec) try { rec.stop(); } catch (e) {}
+      setHud("SPEAKING");
+
+      const clean = text.replace(/```[\s\S]*?```/g, "Tactical code projected on your HUD, Peter.").replace(/[#*`_]/g, "");
+      $('subtitle').innerText = `"${clean}"`;
+
+      const u = new SpeechSynthesisUtterance(clean);
+      const v = speechSynthesis.getVoices().find(x => /samantha|victoria|karen|zira|aria|jenny|female|uk/i.test(x.name));
+      if (v) u.voice = v;
+      u.pitch = 1.1; u.rate = 1.06;
+      u.onend = u.onerror = () => { setHud(next); startRec(); };
+      speechSynthesis.speak(u);
     }
 
-    function speakEV(text, targetNextState = STATE.STANDBY) {
-      window.speechSynthesis.cancel();
-      if (recognition) try { recognition.stop(); } catch(e){}
-      setSystemState(STATE.SPEAKING);
-
-      let cleanSpeech = text.replace(/```[\s\S]*?```/g, "Code telemetry uploaded to HUD.").replace(/[#*`_]/g, "");
-      const utterance = new SpeechSynthesisUtterance(cleanSpeech);
-      
-      const voices = window.speechSynthesis.getVoices();
-      // Match a calm, supportive female voice like E.V.
-      const evVoice = voices.find(v => (v.name.includes('Female') || v.name.includes('Natural') || v.name.includes('Samantha') || v.name.includes('Victoria') || v.name.includes('Zira') || v.lang.includes('en-US')) && !v.name.includes('Male'));
-      if (evVoice) utterance.voice = evVoice;
-
-      utterance.pitch = 1.05;
-      utterance.rate = 1.02;
-
-      utterance.onend = () => { setSystemState(targetNextState); restartRecognition(); };
-      utterance.onerror = () => { setSystemState(targetNextState); restartRecognition(); };
-
-      try { window.speechSynthesis.speak(utterance); } catch (e) {}
-    }
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recognition = null;
-    if (SpeechRecognition) {
-      recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = false;
-
-      recognition.onresult = async (event) => {
-        const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
-        
-        if (transcript.includes("open whatsapp")) {
-          window.location.href = "whatsapp://";
-          speakEV("Routing coms to WhatsApp, Peter.", STATE.LISTENING); return;
-        }
-        if (transcript.includes("open youtube")) {
-          window.location.href = "vnd.youtube://";
-          speakEV("Opening YouTube feed.", STATE.LISTENING); return;
-        }
-
-        if (transcript.includes("serious mode") || transcript.includes("combat mode") || transcript.includes("code mode")) {
-          currentMode = MODE.SERIOUS;
-          setSystemState(currentState);
-          document.getElementById('workspace-panel').style.display = "block";
-          speakEV("Tactical mode online. Ready for telemetry.", STATE.LISTENING); return;
-        }
-        if (transcript.includes("standard mode") || transcript.includes("normal mode")) {
-          currentMode = MODE.STANDARD;
-          setSystemState(currentState);
-          document.getElementById('workspace-panel').style.display = "none";
-          speakEV("Standard suit monitoring active.", STATE.LISTENING); return;
-        }
-
-        if (currentState === STATE.STANDBY && (transcript.includes("ev") || transcript.includes("hey ev") || transcript.includes("e.v.") || transcript.includes("jarvis"))) {
-          let clean = transcript.replace(/hey ev|e\.v\.|ev|jarvis/gi, "").trim();
-          setSystemState(STATE.LISTENING);
-          if (clean.length > 2) handleUserQuery(clean);
-          else speakEV("I'm right here, Peter. What's on your mind?", STATE.LISTENING);
-        } else if (currentState === STATE.LISTENING && transcript.length > 1) {
-          handleUserQuery(transcript);
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const rec = SR ? new SR() : null;
+    if (rec) {
+      rec.continuous = true;
+      rec.onresult = e => {
+        const txt = e.results[e.results.length - 1][0].transcript.trim();
+        const low = txt.toLowerCase();
+        if (low.includes("open whatsapp")) { location.href = "whatsapp://"; return; }
+        if (low.includes("open youtube")) { location.href = "vnd.youtube://"; return; }
+        if (state === "STANDBY" && /\b(ev|evie|e\.v\.|jarvis)\b/i.test(low)) {
+          const q = txt.replace(/hey|evie|e\.v\.|ev|jarvis/gi, "").trim();
+          q.length > 2 ? askEV(q) : speak("Optics online, Peter. What's the play?");
+        } else if (state === "LISTENING" && txt.length > 1) {
+          askEV(txt);
         }
       };
-
-      recognition.onend = () => { if (currentState !== STATE.OFF && currentState !== STATE.SPEAKING) restartRecognition(); };
+      rec.onend = () => { if (state !== "OFF" && state !== "SPEAKING") startRec(); };
     }
 
-    function restartRecognition() {
-      if (!recognition) return;
-      try { recognition.stop(); } catch(e) {}
-      setTimeout(() => { try { if (currentState !== STATE.OFF && currentState !== STATE.SPEAKING) recognition.start(); } catch(e) {} }, 250);
+    function startRec() {
+      if (!rec) return;
+      setTimeout(() => { try { if (state !== "OFF" && state !== "SPEAKING") rec.start(); } catch (e) {} }, 250);
     }
 
-    async function handleUserQuery(query) {
-      setSystemState(STATE.THINKING);
-      
-      const key = (GROQ_API_KEY || localStorage.getItem('jarvis_groq_key') || "").trim();
-      if (!key) {
-        document.getElementById('status-text').innerText = "ERROR: NO API KEY";
-        alert("Please paste your Groq API key (gsk_...) in the top bar and tap SAVE.");
-        speakEV("Peter, I need your Groq API key in the top bar to initialize.", STATE.STANDBY);
-        return;
+    async function askEV(query) {
+      if (!GROQ_KEY) {
+        $('key-bar').classList.remove('hidden');
+        toast("Paste your Groq Key first");
+        return speak("Peter, link your Groq neural key in the top bar first.", "STANDBY");
       }
+      setHud("THINKING");
+      $('subtitle').innerText = `You: "${query}"`;
 
-      // Persona prompt matching E.V. from Spider-Man: Brand New Day
-      let sysPrompt = "You are E.V., Peter Parker's homemade, loyal suit AI and closest companion from Spider-Man: Brand New Day. You are intelligent, warm, attentive, slightly witty, and speak naturally like a supportive close friend and tactical suit assistant. Address him naturally (often as Peter). Keep verbal responses concise in 1-2 natural sentences.";
-      if (currentMode === MODE.SERIOUS) {
-        sysPrompt = "You are E.V. in Tactical/Serious Mode. Provide 1 crisp, focused sentence followed by complete, production-ready code inside ``` codeblocks.";
-      }
+      const sys = mode === "TACTICAL"
+        ? "You are E.V., Peter Parker's Spider-Man AI. Give a 1-sentence intro followed by complete code in ``` blocks."
+        : "You are E.V. (Evie), Peter Parker's warm, witty AI in his Spider-Man: Brand New Day suit. Reply in 1-2 short spoken sentences.";
 
-      chatMemory.push({ role: "user", content: query });
-      if (chatMemory.length > 6) chatMemory = chatMemory.slice(-6);
+      memory.push({ role: "user", content: query });
+      if (memory.length > 6) memory = memory.slice(-6);
 
       try {
-        // FIXED: Clean endpoint string without Markdown link syntax
-        const response = await fetch("[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)", {
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + key
-          },
-          body: JSON.stringify({
-            model: "llama-3.1-8b-instant",
-            messages: [{ role: "system", content: sysPrompt }, ...chatMemory],
-            max_tokens: 600,
-            temperature: 0.6
-          })
+          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + GROQ_KEY },
+          body: JSON.stringify({ model: "llama-3.1-8b-instant", messages: [{ role: "system", content: sys }, ...memory], max_tokens: 550 })
         });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error?.message || res.status);
 
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          const errMsg = errData?.error?.message || ("HTTP " + response.status);
-          throw new Error(errMsg);
-        }
+        const reply = data.choices[0].message.content;
+        memory.push({ role: "assistant", content: reply });
+        lastOutput = reply;
 
-        const data = await response.json();
-        const aiResponse = data.choices[0].message.content;
-
-        chatMemory.push({ role: "assistant", content: aiResponse });
-        currentResearchData = aiResponse;
-
-        let voiceText = aiResponse;
-        if (aiResponse.includes("```")) {
-          voiceText = aiResponse.split("```")[0].trim() || "Uploaded your code to the suit HUD, Peter.";
-        }
-
-        if (currentMode === MODE.SERIOUS || aiResponse.includes("```")) {
-          downloadBtn.style.display = "block";
-          document.getElementById('workspace-panel').style.display = "block";
-          document.getElementById('workspace-content').innerHTML = aiResponse
-            .replace(/```(\w+)?([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+        if (mode === "TACTICAL" || reply.includes("```")) {
+          $('export-btn').classList.remove('hidden');
+          $('workspace').classList.remove('hidden');
+          $('workspace-body').innerHTML = reply
+            .replace(/```(\w+)?([\s\S]*?)```/g, '<pre class="bg-black/80 border border-cyan-500/30 p-2 rounded-lg overflow-x-auto text-cyan-300 font-mono"><code>$2</code></pre>')
             .replace(/\n/g, "<br>");
         }
-
-        speakEV(voiceText, STATE.LISTENING);
+        speak(reply.split("```")[0].trim() || "Tactical code ready on your lens display, Peter.");
       } catch (err) {
-        document.getElementById('status-text').innerText = "ERR: " + err.message.slice(0, 22);
-        alert("E.V. DIAGNOSTIC ERROR:\n" + err.message);
-        speakEV("Telemetry anomaly encountered. Check your connection or API key.", STATE.STANDBY);
+        toast("Error: " + err.message.slice(0, 30));
+        speak("Neural link interference, Peter. Check your API key.", "STANDBY");
       }
     }
 
-    function setSystemState(newState) {
-      currentState = newState;
-      let pColor = currentMode === MODE.SERIOUS ? "#00e5ff" : "#ff3344";
-      
-      const hud = document.getElementById('status-hud');
-      const ind = document.getElementById('status-indicator');
-      const btn = document.getElementById('micBtn');
-
-      hud.style.borderColor = pColor; hud.style.color = pColor;
-      ind.style.backgroundColor = pColor; ind.style.boxShadow = `0 0 8px ${pColor}`;
-      btn.style.borderColor = pColor; btn.style.color = pColor;
-
-      const st = document.getElementById('status-text');
-      if (newState === STATE.OFF) { st.innerText = "E.V. SUIT OFFLINE"; btn.innerText = "TAP TO CONNECT WITH E.V."; }
-      if (newState === STATE.STANDBY) { st.innerText = "E.V. ONLINE (SAY 'HEY E.V.')"; btn.innerText = "STANDBY • TAP TO WAKE"; }
-      if (newState === STATE.LISTENING) { st.innerText = "E.V. LISTENING..."; btn.innerText = "LISTENING..."; }
-      if (newState === STATE.THINKING) { st.innerText = "ANALYZING..."; btn.innerText = "THINKING..."; }
-      if (newState === STATE.SPEAKING) { st.innerText = "E.V. SPEAKING"; btn.innerText = "TAP TO INTERRUPT"; }
+    function setHud(s) {
+      state = s;
+      const c = s === "LISTENING" || s === "THINKING" ? "#00e5ff" : "#ff1744";
+      $('status-hud').style.borderColor = c;
+      $('dot').style.background = c;
+      $('micBtn').style.borderColor = c;
+      $('sub-badge').innerText = s;
+      const map = {
+        OFF: ["OPTICS OFFLINE", "TAP TO LINK E.V."],
+        STANDBY: ["SAY 'HEY E.V.'", "STANDBY • TAP TO TALK"],
+        LISTENING: ["LISTENING TO PETER...", "LISTENING..."],
+        THINKING: ["CALIBRATING...", "COMPUTING..."],
+        SPEAKING: ["E.V. TRANSMITTING", "TAP TO INTERRUPT"]
+      };
+      [$('status-text').innerText, $('micBtn').innerText] = map[s];
     }
 
-    document.getElementById('micBtn').addEventListener('click', () => {
-      audioCtx.resume();
-      window.speechSynthesis.getVoices();
-      window.speechSynthesis.cancel();
-      
-      if (currentState === STATE.OFF) {
-        setSystemState(STATE.STANDBY);
-        playAudioFx('wake');
-        speakEV("E.V. systems online. Ready when you are, Peter.", STATE.STANDBY);
-        if (recognition) try { recognition.start(); } catch(e){}
-      } else if (currentState === STATE.SPEAKING) {
-        window.speechSynthesis.cancel();
-        setSystemState(STATE.LISTENING);
-        restartRecognition();
-      } else {
-        playAudioFx('wake');
-        setSystemState(STATE.LISTENING);
-        speakEV("I'm listening, Peter.", STATE.LISTENING);
-      }
-    });
-
-    window.onload = () => {
-      init3D();
-      setSystemState(STATE.OFF);
+    $('micBtn').onclick = () => {
+      beep(720, 0.15);
+      if (state === "SPEAKING") { speechSynthesis.cancel(); setHud("LISTENING"); startRec(); }
+      else { speak(state === "OFF" ? "E.V. optics online. Targeting matrix zeroed in, Peter." : "Right here, Peter. What do you need?"); }
     };
-    window.addEventListener('resize', () => {
-      if (camera && renderer) {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      }
-    });
+
+    window.onload = () => { init3D(); setHud("OFF"); };
+    window.onresize = () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    };
   </script>
 </body>
 </html>
