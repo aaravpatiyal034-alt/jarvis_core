@@ -2,238 +2,242 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>E.V. Tactical Lens HUD</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E.V. Assistant</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: radial-gradient(circle at center, #0e1726 0%, #030712 100%);
-      color: #00e5ff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
-      height: 100dvh; width: 100vw; overflow: hidden; display: flex; flex-direction: column;
-      align-items: center; justify-content: space-between; padding: 14px;
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: system-ui, -apple-system, sans-serif;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+      max-width: 500px;
+      margin: 0 auto;
     }
-    #hud-top, #hud-bottom { width: 100%; max-width: 440px; z-index: 10; }
-    .status-badge {
-      display: flex; align-items: center; justify-content: space-between;
-      border: 1px solid rgba(255, 51, 68, 0.4); background: rgba(10, 15, 30, 0.85);
-      border-radius: 8px; padding: 6px 12px; font-size: 11px; letter-spacing: 1.5px;
-      text-transform: uppercase; color: #ff3344; box-shadow: 0 0 15px rgba(255, 51, 68, 0.2);
+    header { display: flex; flex-direction: column; gap: 10px; }
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #1e293b;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
     }
-    .indicator { width: 8px; height: 8px; border-radius: 50%; background: #ff3344; box-shadow: 0 0 8px #ff3344; }
-    .controls { display: flex; gap: 6px; margin-top: 8px; }
+    .indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #94a3b8;
+      display: inline-block;
+      margin-right: 8px;
+    }
+    .key-bar { display: flex; gap: 8px; }
     input {
-      flex: 1; background: rgba(5, 10, 20, 0.9); border: 1px solid rgba(0, 229, 255, 0.3);
-      border-radius: 6px; color: #fff; padding: 8px 10px; font-size: 11px; outline: none;
+      flex: 1;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #fff;
+      padding: 8px 12px;
+      font-size: 13px;
+      outline: none;
     }
     button {
-      background: rgba(255, 51, 68, 0.15); border: 1px solid #ff3344; color: #ff3344;
-      border-radius: 6px; padding: 8px 12px; font-size: 11px; font-weight: 700;
-      letter-spacing: 1px; cursor: pointer; text-transform: uppercase;
+      background: #2563eb;
+      border: none;
+      color: #fff;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
     }
-    #hud-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
-    #workspace {
-      position: absolute; top: 120px; width: calc(100% - 28px); max-width: 500px;
-      max-height: 48vh; background: rgba(4, 9, 18, 0.95); border: 1px solid #00e5ff;
-      border-radius: 8px; padding: 12px; font-size: 12px; color: #e2e8f0;
-      overflow-y: auto; display: none; z-index: 20; box-shadow: 0 0 25px rgba(0, 229, 255, 0.2);
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #output-box {
+      flex: 1;
+      background: #1e293b;
+      border-radius: 8px;
+      margin: 16px 0;
+      padding: 14px;
+      overflow-y: auto;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+      white-space: pre-wrap;
     }
-    #workspace pre { background: #010409; border: 1px solid #00e5ff44; padding: 8px; border-radius: 4px; overflow-x: auto; color: #00e5ff; margin-top: 6px; }
     #micBtn {
-      width: 100%; padding: 14px; border-radius: 8px; font-size: 12px;
-      letter-spacing: 2px; backdrop-filter: blur(10px);
+      width: 100%;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #0284c7;
     }
+    #micBtn.listening { background: #ef4444; }
   </style>
 </head>
 <body>
-  <canvas id="hud-canvas"></canvas>
 
-  <div id="hud-top">
-    <div class="status-badge" id="badge">
-      <div style="display:flex; align-items:center; gap:8px;">
+  <header>
+    <div class="status-row">
+      <div>
         <span class="indicator" id="ind"></span>
-        <span id="status">E.V. LENS OFFLINE</span>
+        <span id="status-text">Ready</span>
       </div>
-      <span style="font-size:9px; opacity:0.75;">SUIT OS 2.6</span>
+      <span style="color: #94a3b8; font-size: 11px;">Groq LLM</span>
     </div>
-    <div class="controls">
-      <input type="password" id="key-in" placeholder="Groq Key (gsk_...)" />
-      <button onclick="saveKey()">LINK</button>
-      <button id="dl-btn" style="display:none;" onclick="exportCode()">EXPORT</button>
+    <div class="key-bar">
+      <input type="password" id="key-input" placeholder="Enter Groq API Key (gsk_...)" />
+      <button onclick="saveKey()">Save</button>
     </div>
-  </div>
+  </header>
 
-  <div id="workspace">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <span style="color:#00e5ff; font-weight:700;">TACTICAL TELEMETRY</span>
-      <button style="padding:2px 8px; font-size:10px;" onclick="document.getElementById('workspace').style.display='none'">X</button>
-    </div>
-    <div id="ws-content" style="margin-top:6px;"></div>
-  </div>
+  <div id="output-box">Responses and transcriptions will appear here.</div>
 
-  <div id="hud-bottom">
-    <button id="micBtn" onclick="toggleEV()">INITIALIZE E.V.</button>
-  </div>
+  <footer>
+    <button id="micBtn" onclick="toggleVoice()">Start Listening</button>
+  </footer>
 
   <script>
-    let GROQ_KEY = (localStorage.getItem('ev_key') || "").trim();
-    let codeDump = "", state = "OFF", mode = "STANDARD", memory = [];
-    document.getElementById('key-in').value = GROQ_KEY;
+    let apiKey = (localStorage.getItem('assistant_api_key') || "").trim();
+    let isListening = false;
+    let chatMemory = [];
+    
+    const keyInput = document.getElementById('key-input');
+    const statusText = document.getElementById('status-text');
+    const indicator = document.getElementById('ind');
+    const outputBox = document.getElementById('output-box');
+    const micBtn = document.getElementById('micBtn');
+
+    if (apiKey) keyInput.value = apiKey;
 
     function saveKey() {
-      GROQ_KEY = document.getElementById('key-in').value.trim();
-      localStorage.setItem('ev_key', GROQ_KEY);
-      setState("STANDBY");
-      speak("Telemetry link established, Peter.");
+      apiKey = keyInput.value.trim();
+      localStorage.setItem('assistant_api_key', apiKey);
+      setStatus("Key Saved", "#22c55e");
+      outputBox.innerText = "API key saved. You can now start using voice.";
     }
 
-    function exportCode() {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([codeDump], { type: 'text/markdown' }));
-      a.download = `ev_data_${Date.now()}.md`;
-      a.click();
+    function setStatus(text, color = "#94a3b8") {
+      statusText.innerText = text;
+      indicator.style.background = color;
     }
 
-    // --- Compact Lens Canvas HUD ---
-    const canvas = document.getElementById('hud-canvas'), ctx = canvas.getContext('2d');
-    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    window.onresize = resize; resize();
-
-    let angle = 0;
-    function drawHUD() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const cx = canvas.width / 2, cy = canvas.height / 2;
-      const color = mode === "SERIOUS" ? "#00e5ff" : "#ff3344";
-      angle += state === "THINKING" ? 0.05 : 0.008;
-
-      ctx.save();
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1.2;
-
-      // Outer Web Reticle
-      ctx.beginPath();
-      ctx.arc(cx, cy, 90, 0, Math.PI * 2);
-      ctx.setLineDash([4, 12]);
-      ctx.stroke();
-
-      // Spinning Data Ring
-      ctx.beginPath();
-      ctx.arc(cx, cy, 75, angle, angle + Math.PI * 1.3);
-      ctx.setLineDash([18, 6]);
-      ctx.stroke();
-
-      // Center Pulse
-      const pulse = state === "SPEAKING" ? Math.sin(Date.now() * 0.015) * 8 : 0;
-      ctx.setLineDash([]);
-      ctx.beginPath();
-      ctx.arc(cx, cy, 28 + pulse, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Crosshair Ticks
-      for (let i = 0; i < 4; i++) {
-        const a = (i * Math.PI) / 2;
-        ctx.beginPath();
-        ctx.moveTo(cx + Math.cos(a) * 98, cy + Math.sin(a) * 98);
-        ctx.lineTo(cx + Math.cos(a) * 110, cy + Math.sin(a) * 110);
-        ctx.stroke();
-      }
-      ctx.restore();
-      requestAnimationFrame(drawHUD);
-    }
-    drawHUD();
-
-    // --- Audio & Assistant Logic ---
-    function speak(text, nextState = "STANDBY") {
+    // Text to Speech
+    function speak(text) {
       window.speechSynthesis.cancel();
-      if (rec) try { rec.stop(); } catch(e){}
-      setState("SPEAKING");
-
-      const u = new SpeechSynthesisUtterance(text.replace(/```[\s\S]*?```/g, "Code sent to lens HUD.").replace(/[#*`_]/g, ""));
-      const v = window.speechSynthesis.getVoices().find(v => v.name.includes("Female") || v.name.includes("Natural") || v.lang.includes("en-US"));
-      if (v) u.voice = v;
-      u.pitch = 1.05; u.rate = 1.0;
-      u.onend = u.onerror = () => { setState(nextState); startRec(); };
-      window.speechSynthesis.speak(u);
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      utterance.onend = () => setStatus("Ready", "#22c55e");
+      window.speechSynthesis.speak(utterance);
     }
 
-    const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const rec = Rec ? new Rec() : null;
-    if (rec) {
-      rec.continuous = true;
-      rec.onresult = (e) => {
-        const txt = e.results[e.results.length - 1][0].transcript.trim().toLowerCase();
-        if (txt.includes("open whatsapp")) { window.location.href = "whatsapp://"; speak("Routing to WhatsApp, Peter.", "LISTENING"); return; }
-        if (txt.includes("open youtube")) { window.location.href = "vnd.youtube://"; speak("Opening YouTube.", "LISTENING"); return; }
-        if (txt.includes("serious mode") || txt.includes("combat mode")) { mode = "SERIOUS"; speak("Tactical mode online.", "LISTENING"); return; }
-        if (txt.includes("standard mode")) { mode = "STANDARD"; speak("Standard lens monitoring.", "LISTENING"); return; }
+    // Speech Recognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
 
-        if (state === "STANDBY" && (txt.includes("ev") || txt.includes("hey ev") || txt.includes("spider-man"))) {
-          const q = txt.replace(/hey ev|ev|spider-man/gi, "").trim();
-          setState("LISTENING");
-          q.length > 2 ? queryGroq(q) : speak("I'm listening, Peter.", "LISTENING");
-        } else if (state === "LISTENING" && txt.length > 1) {
-          queryGroq(txt);
-        }
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        isListening = true;
+        micBtn.innerText = "Listening...";
+        micBtn.classList.add("listening");
+        setStatus("Listening", "#ef4444");
       };
-      rec.onend = () => { if (state !== "OFF" && state !== "SPEAKING") startRec(); };
+
+      recognition.onresult = (event) => {
+        const text = event.results[0][0].transcript;
+        outputBox.innerText = `You: ${text}\n\nThinking...`;
+        sendToGroq(text);
+      };
+
+      recognition.onerror = (event) => {
+        setStatus("Mic Error", "#f59e0b");
+        outputBox.innerText = `Microphone error: ${event.error}`;
+        resetMicButton();
+      };
+
+      recognition.onend = () => resetMicButton();
+    } else {
+      outputBox.innerText = "Speech Recognition is not supported in this browser. Please use Chrome or Edge.";
     }
 
-    function startRec() { try { rec && rec.start(); } catch(e){} }
+    function resetMicButton() {
+      isListening = false;
+      micBtn.innerText = "Start Listening";
+      micBtn.classList.remove("listening");
+    }
 
-    async function queryGroq(q) {
-      if (!GROQ_KEY) { speak("Peter, please input and link your Groq API key first.", "STANDBY"); return; }
-      setState("THINKING");
-      const sys = mode === "SERIOUS" 
-        ? "You are E.V. in tactical mode. Give 1 crisp sentence then complete code enclosed in ```."
-        : "You are E.V., Peter Parker's homemade suit AI companion in Spider-Man: Brand New Day. Speak with warm, calm intelligence. Keep answers concise (1-2 sentences).";
+    function toggleVoice() {
+      if (!recognition) return;
+      if (isListening) {
+        recognition.stop();
+      } else {
+        recognition.start();
+      }
+    }
 
-      memory.push({ role: "user", content: q });
-      if (memory.length > 6) memory = memory.slice(-6);
+    // Send query to Groq
+    async function sendToGroq(prompt) {
+      if (!apiKey) {
+        setStatus("Missing Key", "#f59e0b");
+        outputBox.innerText = "Error: Please paste your Groq API key above and click Save.";
+        speak("Please enter your API key first.");
+        return;
+      }
+
+      setStatus("Processing", "#3b82f6");
+
+      chatMemory.push({ role: "user", content: prompt });
+      if (chatMemory.length > 6) chatMemory = chatMemory.slice(-6);
 
       try {
-        const res = await fetch("[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)", {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + GROQ_KEY },
-          body: JSON.stringify({ model: "llama-3.1-8b-instant", messages: [{ role: "system", content: sys }, ...memory], max_tokens: 500, temperature: 0.6 })
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: "llama-3.1-8b-instant",
+            messages: [
+              { role: "system", content: "You are a helpful, direct, and concise AI assistant. Do not roleplay or assume any fictional character identity." },
+              ...chatMemory
+            ],
+            max_tokens: 300,
+            temperature: 0.5
+          })
         });
-        const data = await res.json();
-        const out = data.choices[0].message.content;
-        memory.push({ role: "assistant", content: out });
-        codeDump = out;
 
-        if (out.includes("```") || mode === "SERIOUS") {
-          document.getElementById('dl-btn').style.display = "block";
-          document.getElementById('workspace').style.display = "block";
-          document.getElementById('ws-content').innerHTML = out.replace(/```(\w+)?([\s\S]*?)```/g, '<pre><code>$2</code></pre>').replace(/\n/g, "<br>");
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData?.error?.message || `HTTP ${response.status}`);
         }
-        speak(out.includes("```") ? out.split("```")[0].trim() || "Uploaded to your HUD." : out, "LISTENING");
+
+        const data = await response.json();
+        const reply = data.choices[0].message.content.trim();
+
+        chatMemory.push({ role: "assistant", content: reply });
+        outputBox.innerText = `You: ${prompt}\n\nAI: ${reply}`;
+        setStatus("Speaking", "#22c55e");
+        speak(reply);
+
       } catch (err) {
-        speak("Telemetry error encountered, Peter.", "STANDBY");
-      }
-    }
-
-    function setState(s) {
-      state = s;
-      const col = mode === "SERIOUS" ? "#00e5ff" : "#ff3344";
-      document.getElementById('status').innerText = `E.V. ${s}`;
-      document.getElementById('ind').style.backgroundColor = col;
-      document.getElementById('ind').style.boxShadow = `0 0 8px ${col}`;
-      document.getElementById('micBtn').innerText = s === "OFF" ? "INITIALIZE E.V." : s === "SPEAKING" ? "INTERRUPT" : s;
-    }
-
-    function toggleEV() {
-      window.speechSynthesis.cancel();
-      if (state === "OFF") {
-        setState("STANDBY");
-        speak("E.V. online. Ready when you are, Peter.", "STANDBY");
-        startRec();
-      } else if (state === "SPEAKING") {
-        setState("LISTENING");
-      } else {
-        setState("LISTENING");
-        speak("Go ahead, Peter.", "LISTENING");
+        setStatus("Error", "#ef4444");
+        outputBox.innerText = `API Error: ${err.message}`;
+        speak("There was an error communicating with the service.");
       }
     }
   </script>
 </body>
-  </html>
-  
+</html>
