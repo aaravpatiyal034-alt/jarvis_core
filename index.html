@@ -2,203 +2,246 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>E.V. Assistant</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Neural Voice Core</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #0f172a;
-      color: #f8fafc;
-      font-family: system-ui, -apple-system, sans-serif;
-      height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 16px;
-      max-width: 500px;
-      margin: 0 auto;
+      overflow: hidden;
+      background-color: #02060f;
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      user-select: none;
+      width: 100vw; height: 100vh;
+      position: relative;
     }
-    header { display: flex; flex-direction: column; gap: 10px; }
-    .status-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #1e293b;
-      padding: 10px 14px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 500;
+    #canvas-container {
+      position: absolute; top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 1; touch-action: none;
     }
-    .indicator {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #94a3b8;
-      display: inline-block;
-      margin-right: 8px;
+    #status-hud {
+      position: absolute; top: 16px; left: 50%;
+      transform: translateX(-50%); z-index: 9999;
+      background: rgba(2, 10, 24, 0.92);
+      border: 1px solid #00d9ff;
+      padding: 8px 18px; border-radius: 20px;
+      backdrop-filter: blur(12px); color: #00d9ff;
+      font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; box-shadow: 0 0 18px rgba(0, 217, 255, 0.25);
+      display: flex; align-items: center; gap: 10px;
+      transition: all 0.3s ease;
     }
-    .key-bar { display: flex; gap: 8px; }
-    input {
-      flex: 1;
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 6px;
-      color: #fff;
-      padding: 8px 12px;
-      font-size: 13px;
-      outline: none;
+    #status-indicator {
+      width: 8px; height: 8px; border-radius: 50%;
+      background-color: #00d9ff; box-shadow: 0 0 8px #00d9ff;
     }
-    button {
-      background: #2563eb;
-      border: none;
-      color: #fff;
-      border-radius: 6px;
-      padding: 8px 14px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
+    #control-bar {
+      position: absolute; top: 58px; left: 50%;
+      transform: translateX(-50%); z-index: 9999;
+      display: flex; gap: 6px; width: 94%; max-width: 520px;
     }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    #output-box {
-      flex: 1;
-      background: #1e293b;
-      border-radius: 8px;
-      margin: 16px 0;
-      padding: 14px;
-      overflow-y: auto;
-      font-size: 14px;
-      line-height: 1.5;
-      color: #cbd5e1;
-      border: 1px solid #334155;
-      white-space: pre-wrap;
+    #api-input {
+      flex: 1.2; background: rgba(2, 10, 24, 0.9); border: 1px solid rgba(0, 217, 255, 0.35);
+      border-radius: 8px; color: #fff; padding: 7px 10px; font-size: 11px; outline: none;
+    }
+    #model-select {
+      flex: 1; background: rgba(2, 10, 24, 0.9); border: 1px solid rgba(0, 217, 255, 0.35);
+      border-radius: 8px; color: #00d9ff; padding: 7px 6px; font-size: 11px; outline: none;
+    }
+    .hud-btn {
+      background: rgba(0, 217, 255, 0.2); border: 1px solid #00d9ff;
+      color: #00d9ff; border-radius: 8px; padding: 7px 12px; font-size: 10px;
+      cursor: pointer; font-weight: bold; text-transform: uppercase;
+      backdrop-filter: blur(8px);
+    }
+    #workspace-panel {
+      position: absolute; top: 105px; left: 50%;
+      transform: translateX(-50%); width: 94%; max-width: 600px;
+      max-height: 52vh; z-index: 9998;
+      background: rgba(2, 14, 28, 0.96); border: 1px solid #00d9ff;
+      border-radius: 12px; padding: 14px; color: #e2e8f0;
+      backdrop-filter: blur(18px); box-shadow: 0 0 35px rgba(0, 217, 255, 0.2);
+      overflow-y: auto; display: none; font-size: 12px; line-height: 1.5;
+    }
+    #workspace-panel pre {
+      background: rgba(0, 0, 0, 0.75); border: 1px solid rgba(0, 217, 255, 0.3);
+      border-radius: 6px; padding: 10px; overflow-x: auto;
+      color: #00ffcc; font-family: monospace; font-size: 11px;
+      margin-top: 8px; white-space: pre-wrap; word-break: break-all;
+    }
+    #hud {
+      position: absolute; bottom: 25px; left: 50%;
+      transform: translateX(-50%); z-index: 9999; text-align: center;
+      width: 90%;
     }
     #micBtn {
-      width: 100%;
-      padding: 14px;
-      border-radius: 8px;
-      font-size: 14px;
-      background: #0284c7;
+      background: rgba(0, 217, 255, 0.15); border: 2px solid #00d9ff;
+      color: #00d9ff; padding: 14px 20px; font-size: 12px;
+      font-weight: bold; letter-spacing: 1.2px; border-radius: 30px;
+      box-shadow: 0 0 22px rgba(0, 217, 255, 0.28); backdrop-filter: blur(10px);
+      outline: none; cursor: pointer; width: 100%; max-width: 360px;
     }
-    #micBtn.listening { background: #ef4444; }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-  <header>
-    <div class="status-row">
-      <div>
-        <span class="indicator" id="ind"></span>
-        <span id="status-text">Ready</span>
-      </div>
-      <span style="color: #94a3b8; font-size: 11px;">Groq LLM</span>
-    </div>
-    <div class="key-bar">
-      <input type="password" id="key-input" placeholder="Enter Groq API Key (gsk_...)" />
-      <button onclick="saveKey()">Save</button>
-    </div>
-  </header>
+  <div id="canvas-container"></div>
 
-  <div id="output-box">Responses and transcriptions will appear here.</div>
+  <div id="status-hud">
+    <div id="status-indicator"></div>
+    <span id="status-text">CORE OFFLINE</span>
+  </div>
 
-  <footer>
-    <button id="micBtn" onclick="toggleVoice()">Start Listening</button>
-  </footer>
+  <div id="control-bar">
+    <input type="password" id="api-input" placeholder="Groq API Key (gsk_...)" />
+    <select id="model-select">
+      <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
+      <option value="llama3-8b-8192">llama3-8b-8192</option>
+      <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
+      <option value="llama-3.2-3b-preview">llama-3.2-3b-preview</option>
+    </select>
+    <button class="hud-btn" onclick="saveConfig()">SAVE</button>
+  </div>
+
+  <div id="workspace-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 id="panel-title" style="color:#00d9ff; font-size:12px;">SYSTEM OUTPUT</h3>
+      <button class="hud-btn" onclick="document.getElementById('workspace-panel').style.display='none'">CLOSE</button>
+    </div>
+    <div id="workspace-content" style="margin-top:8px;"></div>
+  </div>
+
+  <div id="hud">
+    <button id="micBtn" onclick="toggleCore()">INITIALIZE ASSISTANT</button>
+  </div>
 
   <script>
-    let apiKey = (localStorage.getItem('assistant_api_key') || "").trim();
-    let isListening = false;
+    let GROQ_API_KEY = (localStorage.getItem('ai_groq_key') || "").trim();
+    let selectedModel = localStorage.getItem('ai_groq_model') || "llama-3.3-70b-versatile";
+
+    const STATE = { OFF: "OFF", STANDBY: "STANDBY", LISTENING: "LISTENING", THINKING: "THINKING", SPEAKING: "SPEAKING" };
+    let currentState = STATE.OFF;
     let chatMemory = [];
-    
-    const keyInput = document.getElementById('key-input');
-    const statusText = document.getElementById('status-text');
-    const indicator = document.getElementById('ind');
-    const outputBox = document.getElementById('output-box');
-    const micBtn = document.getElementById('micBtn');
 
-    if (apiKey) keyInput.value = apiKey;
+    const apiInput = document.getElementById('api-input');
+    const modelSelect = document.getElementById('model-select');
+    apiInput.value = GROQ_API_KEY;
+    modelSelect.value = selectedModel;
 
-    function saveKey() {
-      apiKey = keyInput.value.trim();
-      localStorage.setItem('assistant_api_key', apiKey);
-      setStatus("Key Saved", "#22c55e");
-      outputBox.innerText = "API key saved. You can now start using voice.";
+    function saveConfig() {
+      GROQ_API_KEY = apiInput.value.trim();
+      selectedModel = modelSelect.value;
+      localStorage.setItem('ai_groq_key', GROQ_API_KEY);
+      localStorage.setItem('ai_groq_model', selectedModel);
+      alert("Configuration saved.");
     }
 
-    function setStatus(text, color = "#94a3b8") {
-      statusText.innerText = text;
-      indicator.style.background = color;
+    // --- 3D Holographic Visualizer ---
+    let scene, camera, renderer, globe, basePositions;
+    const clock = new THREE.Clock();
+
+    function init3D() {
+      try {
+        const container = document.getElementById('canvas-container');
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0.2, 2.5);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const gridFloor = new THREE.GridHelper(6, 20, 0x00d9ff, 0x002244);
+        gridFloor.position.y = -1.2;
+        scene.add(gridFloor);
+
+        const globeGeo = new THREE.SphereGeometry(0.8, 28, 28);
+        basePositions = globeGeo.attributes.position.array.slice();
+        const globeMat = new THREE.MeshBasicMaterial({ color: 0x00d9ff, wireframe: true, transparent: true, opacity: 0.85 });
+        globe = new THREE.Mesh(globeGeo, globeMat);
+        scene.add(globe);
+
+        function animate() {
+          requestAnimationFrame(animate);
+          const elapsedTime = clock.getElapsedTime();
+          globe.rotation.y += (currentState === STATE.THINKING ? 0.03 : 0.003);
+
+          if (currentState === STATE.SPEAKING) {
+            const pos = globe.geometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+              const wave = Math.sin(elapsedTime * 9 + basePositions[i*3]*6 + basePositions[i*3+1]*6) * 0.07;
+              pos.setXYZ(i, basePositions[i*3]*(1+wave), basePositions[i*3+1]*(1+wave), basePositions[i*3+2]*(1+wave));
+            }
+            pos.needsUpdate = true;
+          } else {
+            const pos = globe.geometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) pos.setXYZ(i, basePositions[i*3], basePositions[i*3+1], basePositions[i*3+2]);
+            pos.needsUpdate = true;
+          }
+
+          renderer.render(scene, camera);
+        }
+        animate();
+      } catch (e) {
+        console.error("Three.js initialization error:", e);
+      }
     }
 
-    // Text to Speech
-    function speak(text) {
+    // --- Speech Synthesis ---
+    function speak(text, targetNextState = STATE.STANDBY) {
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
+      if (recognition) try { recognition.stop(); } catch(e){}
+      setSystemState(STATE.SPEAKING);
+
+      const utterance = new SpeechSynthesisUtterance(text.replace(/```[\s\S]*?```/g, "Code output generated on screen.").replace(/[#*`_]/g, ""));
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
-      utterance.onend = () => setStatus("Ready", "#22c55e");
+      utterance.onend = () => { setSystemState(targetNextState); startListening(); };
+      utterance.onerror = () => { setSystemState(targetNextState); startListening(); };
+
       window.speechSynthesis.speak(utterance);
     }
 
-    // Speech Recognition
+    // --- Speech Recognition ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition = null;
 
     if (SpeechRecognition) {
       recognition = new SpeechRecognition();
-      recognition.continuous = false;
+      recognition.continuous = true;
       recognition.interimResults = false;
 
-      recognition.onstart = () => {
-        isListening = true;
-        micBtn.innerText = "Listening...";
-        micBtn.classList.add("listening");
-        setStatus("Listening", "#ef4444");
+      recognition.onresult = async (event) => {
+        const transcript = event.results[event.results.length - 1][0].transcript.trim();
+        if (transcript.length > 1) {
+          handleQuery(transcript);
+        }
       };
 
-      recognition.onresult = (event) => {
-        const text = event.results[0][0].transcript;
-        outputBox.innerText = `You: ${text}\n\nThinking...`;
-        sendToGroq(text);
+      recognition.onend = () => {
+        if (currentState !== STATE.OFF && currentState !== STATE.SPEAKING) startListening();
       };
-
-      recognition.onerror = (event) => {
-        setStatus("Mic Error", "#f59e0b");
-        outputBox.innerText = `Microphone error: ${event.error}`;
-        resetMicButton();
-      };
-
-      recognition.onend = () => resetMicButton();
-    } else {
-      outputBox.innerText = "Speech Recognition is not supported in this browser. Please use Chrome or Edge.";
     }
 
-    function resetMicButton() {
-      isListening = false;
-      micBtn.innerText = "Start Listening";
-      micBtn.classList.remove("listening");
-    }
-
-    function toggleVoice() {
+    function startListening() {
       if (!recognition) return;
-      if (isListening) {
-        recognition.stop();
-      } else {
-        recognition.start();
-      }
+      try { recognition.start(); } catch(e) {}
     }
 
-    // Send query to Groq
-    async function sendToGroq(prompt) {
-      if (!apiKey) {
-        setStatus("Missing Key", "#f59e0b");
-        outputBox.innerText = "Error: Please paste your Groq API key above and click Save.";
-        speak("Please enter your API key first.");
+    // --- Groq Query Handler ---
+    async function handleQuery(query) {
+      setSystemState(STATE.THINKING);
+
+      if (!GROQ_API_KEY) {
+        document.getElementById('status-text').innerText = "ERROR: NO API KEY";
+        alert("Please paste your Groq API key and tap SAVE.");
+        speak("Please save your Groq API key first.", STATE.STANDBY);
         return;
       }
 
-      setStatus("Processing", "#3b82f6");
-
-      chatMemory.push({ role: "user", content: prompt });
+      chatMemory.push({ role: "user", content: query });
       if (chatMemory.length > 6) chatMemory = chatMemory.slice(-6);
 
       try {
@@ -206,15 +249,15 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
+            "Authorization": "Bearer " + GROQ_API_KEY
           },
           body: JSON.stringify({
-            model: "llama-3.1-8b-instant",
+            model: selectedModel,
             messages: [
-              { role: "system", content: "You are a helpful, direct, and concise AI assistant. Do not roleplay or assume any fictional character identity." },
+              { role: "system", content: "You are an intelligent, professional, and efficient AI assistant. Provide concise, direct answers without unnecessary filler, and never use fictional roleplay or persona names." },
               ...chatMemory
             ],
-            max_tokens: 300,
+            max_tokens: 500,
             temperature: 0.5
           })
         });
@@ -225,19 +268,62 @@
         }
 
         const data = await response.json();
-        const reply = data.choices[0].message.content.trim();
-
+        const reply = data.choices[0].message.content;
         chatMemory.push({ role: "assistant", content: reply });
-        outputBox.innerText = `You: ${prompt}\n\nAI: ${reply}`;
-        setStatus("Speaking", "#22c55e");
-        speak(reply);
 
+        // Show code or complex text in the HUD workspace
+        if (reply.includes("```")) {
+          document.getElementById('workspace-panel').style.display = "block";
+          document.getElementById('workspace-content').innerHTML = reply
+            .replace(/```(\w+)?([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+            .replace(/\n/g, "<br>");
+        }
+
+        speak(reply.includes("```") ? reply.split("```")[0].trim() || "Details displayed on screen." : reply, STATE.STANDBY);
       } catch (err) {
-        setStatus("Error", "#ef4444");
-        outputBox.innerText = `API Error: ${err.message}`;
-        speak("There was an error communicating with the service.");
+        document.getElementById('status-text').innerText = "API ERROR";
+        document.getElementById('workspace-panel').style.display = "block";
+        document.getElementById('workspace-content').innerText = `Error: ${err.message}\n\nTip: Try choosing another model from the dropdown above.`;
+        speak("There was an API error. Check the screen for details.", STATE.STANDBY);
       }
     }
+
+    function setSystemState(newState) {
+      currentState = newState;
+      const st = document.getElementById('status-text');
+      const btn = document.getElementById('micBtn');
+
+      if (newState === STATE.OFF) { st.innerText = "CORE OFFLINE"; btn.innerText = "INITIALIZE ASSISTANT"; }
+      if (newState === STATE.STANDBY) { st.innerText = "READY / LISTENING"; btn.innerText = "LISTENING (TAP TO STOP)"; }
+      if (newState === STATE.THINKING) { st.innerText = "PROCESSING..."; btn.innerText = "PROCESSING..."; }
+      if (newState === STATE.SPEAKING) { st.innerText = "RESPONDING"; btn.innerText = "TAP TO INTERRUPT"; }
+    }
+
+    function toggleCore() {
+      if (currentState === STATE.OFF) {
+        setSystemState(STATE.STANDBY);
+        speak("System online. How can I help you?", STATE.STANDBY);
+        startListening();
+      } else if (currentState === STATE.SPEAKING) {
+        window.speechSynthesis.cancel();
+        setSystemState(STATE.STANDBY);
+        startListening();
+      } else {
+        setSystemState(STATE.OFF);
+        if (recognition) recognition.stop();
+        window.speechSynthesis.cancel();
+      }
+    }
+
+    window.onload = () => { init3D(); setSystemState(STATE.OFF); };
+    window.onresize = () => {
+      if (camera && renderer) {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+    };
   </script>
 </body>
-</html>
+  </html>
+  
