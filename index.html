@@ -11,13 +11,15 @@
     body { width: 100vw; height: 100dvh; overflow: hidden; background: #030611; color: #e2e8f0; font-family: system-ui, sans-serif; position: fixed; }
     #canvas-container { position: absolute; inset: 0; z-index: 1; touch-action: none; }
     .hud-overlay { position: absolute; inset: 0; z-index: 2; pointer-events: none; background: radial-gradient(circle at 50% 45%, transparent 30%, #030611 92%); }
+    .app-card { transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
+    .app-card:active { transform: scale(.97); }
   </style>
 </head>
 <body class="flex flex-col justify-between p-3 max-w-md mx-auto">
 
   <div id="canvas-container"></div>
   <div class="hud-overlay"></div>
-  <div id="toast" class="fixed top-3 left-1/2 -translate-x-1/2 z-50 opacity-0 pointer-events-none transition bg-[#050b1a] border border-[#ff1744] text-cyan-200 text-[11px] font-bold px-4 py-1 rounded-full"></div>
+  <div id="toast" class="fixed top-3 left-1/2 -translate-x-1/2 z-50 opacity-0 pointer-events-none transition bg-[#050b1a] border border-[#ff1744] text-cyan-200 text-[11px] font-bold px-4 py-1 rounded-full shadow-lg"></div>
 
   <!-- TOP BAR -->
   <header class="relative z-10 flex flex-col gap-1.5">
@@ -42,6 +44,15 @@
     </div>
   </header>
 
+  <!-- APP SEARCH -->
+  <section id="search-panel" class="relative z-10 hidden bg-[#040b18]/90 border border-cyan-400/40 rounded-2xl p-2.5 backdrop-blur-md">
+    <div class="flex items-center gap-2 mb-2 rounded-full border border-cyan-500/30 bg-black/40 px-2.5 py-1.5">
+      <span class="text-cyan-300 text-xs">🔎</span>
+      <input id="app-search" placeholder="Search apps and games..." class="flex-1 bg-transparent text-[11px] text-white placeholder:text-slate-400 outline-none">
+    </div>
+    <div id="app-grid" class="grid grid-cols-3 gap-2 max-h-[18dvh] overflow-y-auto pr-1"></div>
+  </section>
+
   <!-- WORKSPACE & SUBTITLES -->
   <main class="relative z-10 flex flex-col justify-end gap-2 pointer-events-none my-auto w-full">
     <div id="workspace" class="hidden pointer-events-auto max-h-[34dvh] bg-[#030916]/95 border border-[#ff1744] rounded-xl p-2.5 overflow-y-auto text-[11px]"></div>
@@ -57,8 +68,9 @@
   <!-- BOTTOM CONTROLS -->
   <footer class="relative z-10 flex flex-col gap-1.5">
     <div class="flex gap-1.5">
-      <button id="micBtn" class="flex-1 bg-gradient-to-r from-[#ff1744]/30 to-cyan-500/30 border-2 border-[#ff1744] text-white py-3 rounded-full text-xs font-bold tracking-widest uppercase active:scale-95 transition">TAP TO LINK E.V.</button>
+      <button id="micBtn" class="flex-1 bg-gradient-to-r from-[#ff1744]/30 to-cyan-500/30 border-2 border-[#ff1744] text-white py-3 rounded-full text-xs font-bold tracking-widest uppercase active:scale-[0.98]">TAP</button>
       <button id="chat-toggle" class="bg-[#050d1f] border border-cyan-400/60 text-cyan-300 px-3.5 rounded-full text-xs">⌨️</button>
+      <button id="search-btn" class="bg-[#050d1f] border border-cyan-400/60 text-cyan-300 px-3.5 rounded-full text-xs">🔎</button>
     </div>
     <form id="chat-form" class="hidden flex gap-1.5">
       <input id="chat-input" placeholder="Ask E.V. anything..." class="flex-1 bg-[#040b18] border border-cyan-400/50 rounded-full px-3 py-1.5 text-xs text-white outline-none">
@@ -68,37 +80,115 @@
 
   <script>
     const $ = id => document.getElementById(id);
-    let KEY = (localStorage.getItem('ev_groq_key') || "").trim();
-    let NAME = (localStorage.getItem('ev_user_name') || "").trim();
-    let state = "OFF", mode = "LIVE", memory = [];
+    let KEY = (localStorage.getItem('ev_groq_key') || '').trim();
+    let NAME = (localStorage.getItem('ev_user_name') || '').trim();
+    let state = 'OFF', mode = 'LIVE', memory = [];
+
+    const APP_LIBRARY = [
+      { name: 'FC Mobile 27', type: 'Game', icon: '⚽' },
+      { name: 'Call of Duty', type: 'Game', icon: '🎮' },
+      { name: 'PUBG Mobile', type: 'Game', icon: '🔫' },
+      { name: 'WhatsApp', type: 'App', icon: '💬' },
+      { name: 'YouTube', type: 'App', icon: '▶️' },
+      { name: 'Instagram', type: 'App', icon: '📸' },
+      { name: 'Chrome', type: 'App', icon: '🌐' },
+      { name: 'Camera', type: 'App', icon: '📷' },
+      { name: 'Files', type: 'App', icon: '🗂️' },
+      { name: 'Spotify', type: 'App', icon: '🎵' },
+      { name: 'Telegram', type: 'App', icon: '✈️' },
+      { name: 'Settings', type: 'App', icon: '⚙️' }
+    ];
 
     $('api-input').value = KEY; $('name-input').value = NAME;
-    const syncTag = () => $('user-tag').innerText = NAME ? `E.V. AI // ${NAME.toUpperCase()}` : "E.V. LIVE NEURAL AI";
+    const syncTag = () => $('user-tag').innerText = NAME ? `E.V. AI // ${NAME.toUpperCase()}` : 'E.V. LIVE NEURAL AI';
     syncTag();
 
     const toast = m => { const t = $('toast'); t.innerText = m; t.classList.remove('opacity-0'); setTimeout(() => t.classList.add('opacity-0'), 2200); };
     $('key-toggle').onclick = () => $('key-bar').classList.toggle('hidden');
     $('chat-toggle').onclick = () => $('chat-form').classList.toggle('hidden');
+    $('search-btn').onclick = () => {
+      $('search-panel').classList.toggle('hidden');
+      if (!$('search-panel').classList.contains('hidden')) $('app-search').focus();
+    };
+
+    function renderApps(query = '') {
+      const q = query.trim().toLowerCase();
+      const items = APP_LIBRARY.filter(item => !q || item.name.toLowerCase().includes(q) || item.type.toLowerCase().includes(q));
+      $('app-grid').innerHTML = items.length
+        ? items.map(item => `
+          <button class="app-card flex flex-col items-center justify-center gap-1 rounded-xl border border-cyan-500/20 bg-[#071423]/90 p-2 text-center text-white" data-name="${item.name}">
+            <span class="text-lg">${item.icon}</span>
+            <span class="text-[9px] leading-tight">${item.name}</span>
+            <span class="text-[7px] uppercase tracking-widest text-cyan-300/80">${item.type}</span>
+          </button>
+        `).join('')
+        : '<div class="col-span-3 rounded-xl border border-dashed border-cyan-500/30 bg-black/20 p-3 text-center text-[10px] text-slate-400">No apps or games found</div>';
+
+      $('app-grid').querySelectorAll('.app-card').forEach(btn => {
+        btn.onclick = () => {
+          const appName = btn.dataset.name;
+          launchApp(appName);
+        };
+      });
+    }
+
+    function launchApp(name) {
+      $('search-panel').classList.remove('hidden');
+      $('app-search').value = name;
+      renderApps(name);
+      toast(`${name} opened`);
+      $('subtitle').innerText = `Opening ${name}...`;
+      speak(`Opening ${name} and preparing it for you.`);
+    }
+
+    $('app-search').addEventListener('input', e => renderApps(e.target.value));
 
     $('save-btn').onclick = () => {
       KEY = $('api-input').value.trim(); NAME = $('name-input').value.trim();
       localStorage.setItem('ev_groq_key', KEY); localStorage.setItem('ev_user_name', NAME);
-      syncTag(); $('key-bar').classList.add('hidden'); toast("Saved Profile");
+      syncTag(); $('key-bar').classList.add('hidden'); toast('Saved Profile');
     };
     $('clear-btn').onclick = () => {
-      KEY = $('api-input').value = ""; localStorage.removeItem('ev_groq_key');
-      $('key-bar').classList.add('hidden'); toast("Using Free Built-in AI");
+      KEY = $('api-input').value = ''; localStorage.removeItem('ev_groq_key');
+      $('key-bar').classList.add('hidden'); toast('Using Free Built-in AI');
     };
     $('mode-btn').onclick = () => {
-      mode = mode === "LIVE" ? "CODE" : "LIVE";
+      mode = mode === 'LIVE' ? 'CODE' : 'LIVE';
       $('mode-btn').innerText = mode;
-      $('workspace').classList.toggle('hidden', mode === "LIVE");
+      $('workspace').classList.toggle('hidden', mode === 'LIVE');
     };
     $('chat-form').onsubmit = e => {
       e.preventDefault();
       const q = $('chat-input').value.trim();
-      if (q) { $('chat-input').value = ""; askEV(q); }
+      if (q) { $('chat-input').value = ''; askEV(q); }
     };
+
+    function quickAI(q) {
+      const lower = q.toLowerCase();
+      if (/(search|find).*(app|apps|game|games)/.test(lower) || /show.*(all|app|game)/.test(lower)) {
+        $('search-panel').classList.remove('hidden');
+        $('app-search').focus();
+        renderApps('');
+        $('subtitle').innerText = 'Searching all apps and games...';
+        speak('Showing all apps and games for quick search.');
+        return true;
+      }
+
+      if (/fc mobile 27|fc mobile|fifa mobile|football club/i.test(lower)) {
+        const match = APP_LIBRARY.find(app => /fc mobile/i.test(app.name));
+        if (match) {
+          launchApp(match.name);
+          return true;
+        }
+      }
+
+      if (/(open|launch)\s+(whatsapp|youtube|instagram|chrome|spotify|camera|files|settings)/i.test(lower)) {
+        const match = APP_LIBRARY.find(app => new RegExp(app.name.replace(/\s+/g, '.*'), 'i').test(lower));
+        if (match) { launchApp(match.name); return true; }
+      }
+
+      return false;
+    }
 
     // --- 3D HOLOGRAPHIC ORB ---
     let scene, camera, renderer, core, pts, ring, base;
@@ -108,7 +198,8 @@
       scene = new THREE.Scene();
       camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 100);
       camera.position.set(0, 0.05, 2.5);
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
       renderer.setSize(innerWidth, innerHeight);
       box.appendChild(renderer.domElement);
 
@@ -118,7 +209,7 @@
       const geo = new THREE.IcosahedronGeometry(0.62, 3);
       base = geo.attributes.position.array.slice();
       core = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xff1744, wireframe: true, transparent: true, opacity: 0.8 }));
-      pts = new THREE.Points(new THREE.SphereGeometry(0.78, 24, 24), new THREE.PointsMaterial({ color: 0x00e5ff, size: 0.028 }));
+      pts = new THREE.Points(new THREE.SphereGeometry(0.78, 18, 18), new THREE.PointsMaterial({ color: 0x00e5ff, size: 0.028 }));
       ring = new THREE.Mesh(new THREE.TorusGeometry(0.98, 0.008, 12, 64), new THREE.MeshBasicMaterial({ color: 0x00e5ff }));
       ring.rotation.x = 1.1; scene.add(core, pts, ring);
 
@@ -129,16 +220,16 @@
 
       (function loop() {
         requestAnimationFrame(loop);
-        const t = clock.getElapsedTime(), sp = state === "THINKING" ? 0.035 : (state === "SPEAKING" ? 0.015 : 0.004);
+        const t = clock.getElapsedTime(), sp = state === 'THINKING' ? 0.032 : (state === 'SPEAKING' ? 0.018 : 0.005);
         core.rotation.y += vy + sp; core.rotation.x += vx; pts.rotation.y -= vy + sp * 0.7; ring.rotation.z += 0.01;
         vx *= 0.92; vy *= 0.92;
-        const pos = core.geometry.attributes.position, amp = state === "SPEAKING" ? 0.1 : 0.02;
+        const pos = core.geometry.attributes.position, amp = state === 'SPEAKING' ? 0.1 : 0.02;
         for (let i = 0; i < pos.count; i++) {
           const w = 1 + Math.sin(t * 9 + base[i * 3] * 5) * amp;
           pos.setXYZ(i, base[i * 3] * w, base[i * 3 + 1] * w, base[i * 3 + 2] * w);
         }
         pos.needsUpdate = true;
-        core.material.color.setHex(state === "LISTENING" ? 0x00e5ff : 0xff1744);
+        core.material.color.setHex(state === 'LISTENING' ? 0x00e5ff : 0xff1744);
         renderer.render(scene, camera);
       })();
     }
@@ -160,21 +251,21 @@
       rec.continuous = true;
       rec.onresult = e => {
         const txt = e.results[e.results.length - 1][0].transcript.trim();
-        if (/open whatsapp/i.test(txt)) return location.href = "whatsapp://";
-        if (/open youtube/i.test(txt)) return location.href = "vnd.youtube://";
-        if (state === "STANDBY" && /\b(ev|evie|e\.v\.)\b/i.test(txt)) {
-          const q = txt.replace(/hey|evie|e\.v\.|ev/gi, "").trim();
-          q.length > 2 ? askEV(q) : speak(NAME ? `Online, ${NAME}.` : "E.V. online.");
-        } else if (state === "LISTENING" && txt.length > 1) askEV(txt);
+        if (/open whatsapp/i.test(txt)) return location.href = 'whatsapp://';
+        if (/open youtube/i.test(txt)) return location.href = 'vnd.youtube://';
+        if (state === 'STANDBY' && /\b(ev|evie|e\.v\.)\b/i.test(txt)) {
+          const q = txt.replace(/hey|evie|e\.v\.|ev/gi, '').trim();
+          q.length > 2 ? askEV(q) : speak(NAME ? `Online, ${NAME}.` : 'E.V. online.');
+        } else if (state === 'LISTENING' && txt.length > 1) askEV(txt);
       };
-      rec.onend = () => { if (state !== "OFF" && state !== "SPEAKING") setTimeout(() => { try { rec.start(); } catch (e) {} }, 250); };
+      rec.onend = () => { if (state !== 'OFF' && state !== 'SPEAKING') setTimeout(() => { try { rec.start(); } catch (e) {} }, 250); };
     }
 
-    function speak(text, next = "LISTENING") {
+    function speak(text, next = 'LISTENING') {
       speechSynthesis.cancel();
       if (rec) try { rec.stop(); } catch (e) {}
-      setHud("SPEAKING");
-      const clean = text.replace(/```[\s\S]*?```/g, "Code displayed on screen.").replace(/[#*`_]/g, "");
+      setHud('SPEAKING');
+      const clean = text.replace(/```[\s\S]*?```/g, 'Code displayed on screen.').replace(/[#*`_]/g, '');
       $('subtitle').innerText = `"${clean}"`;
       const u = new SpeechSynthesisUtterance(clean);
       const v = speechSynthesis.getVoices().find(x => /samantha|victoria|karen|zira|aria|female|uk/i.test(x.name));
@@ -183,73 +274,137 @@
       speechSynthesis.speak(u);
     }
 
+    function fallbackReply(q) {
+      const lower = q.toLowerCase();
+      if (/hi|hello|hey/.test(lower)) return NAME ? `Hello ${NAME}, how can I help you today?` : 'Hello, I am E.V. ready to help.';
+      if (/search.*app|show.*app|game/.test(lower)) return 'I can search all your apps and games quickly. Tap the search button or say “search apps”.';
+      if (/fc mobile|fifa mobile/.test(lower)) return 'FC Mobile 27 is available in your game list. I can open it or search for game options for you.';
+      if (/time|date/.test(lower)) return new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+      return 'I am ready. Ask me to search apps, open games, or get quick help.';
+    }
+
     async function callAI(sys, msgs) {
-      if (!KEY || KEY.startsWith("AIza")) {
+      if (quickAI(msgs[msgs.length - 1]?.content || '')) return 'quick_action';
+
+      const payload = { model: 'openai', messages: [{ role: 'system', content: sys }, ...msgs], max_tokens: 180, temperature: 0.3 };
+
+      if (KEY && KEY.startsWith('gsk_')) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 7000);
         try {
-          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${KEY.startsWith("AIza") ? KEY : ""}`, {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] }, contents: msgs.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })) })
+          const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + KEY },
+            body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: sys }, ...msgs], max_tokens: 220, temperature: 0.2 }),
+            signal: controller.signal
           });
+          clearTimeout(timer);
+          const d = await r.json();
+          if (r.ok && d?.choices?.[0]?.message?.content) return d.choices[0].message.content;
+        } catch (e) {
+          clearTimeout(timer);
+        }
+      }
+
+      if (KEY && KEY.startsWith('AIza')) {
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 7000);
+          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] }, contents: msgs.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })) }),
+            signal: controller.signal
+          });
+          clearTimeout(timer);
           const d = await r.json();
           if (d?.candidates?.[0]?.content?.parts?.[0]?.text) return d.candidates[0].content.parts[0].text;
         } catch (e) {}
       }
-      if (KEY.startsWith("gsk_")) {
-        const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + KEY },
-          body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{ role: "system", content: sys }, ...msgs], max_tokens: 500 })
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 7000);
+      try {
+        const p = await fetch('https://text.pollinations.ai/openai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: controller.signal
         });
-        const d = await r.json();
-        if (r.ok) return d.choices[0].message.content;
+        clearTimeout(timer);
+        const d = await p.json();
+        if (d?.choices?.[0]?.message?.content) return d.choices[0].message.content;
+      } catch (e) {
+        clearTimeout(timer);
       }
-      const p = await fetch("https://text.pollinations.ai/openai", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "openai", messages: [{ role: "system", content: sys }, ...msgs] })
-      });
-      return (await p.json()).choices[0].message.content;
+
+      return fallbackReply(msgs[msgs.length - 1]?.content || '');
     }
 
     async function askEV(q) {
-      setHud("THINKING"); $('subtitle').innerText = `You: "${q}"`;
+      if (quickAI(q)) return;
+
+      setHud('THINKING'); $('subtitle').innerText = `You: "${q}"`;
       const m = q.match(/(?:my name is|call me|i am|i'm)\s+([a-zA-Z]{2,18})/i);
       if (m && !/^(ready|here|fine|good|back)$/i.test(m[1])) {
         NAME = m[1][0].toUpperCase() + m[1].slice(1);
         localStorage.setItem('ev_user_name', NAME); $('name-input').value = NAME; syncTag();
       }
-      const uCtx = NAME ? `User's real name is ${NAME}.` : `Do not call user Peter. Ask their real name naturally if unknown.`;
-      const sys = `You are E.V., a real, live personal AI assistant (no roleplay). ${uCtx} Reply in 1-2 short sentences.${mode === "CODE" ? " Include code in ``` blocks." : ""}`;
+      const uCtx = NAME ? `User's real name is ${NAME}.` : 'Do not call user Peter. Ask their real name naturally if unknown.';
+      const sys = `You are E.V., a real, live personal AI assistant (no roleplay). ${uCtx} Reply in 1-2 short sentences. ${mode === 'CODE' ? 'Include code in ``` blocks.' : ''}`;
 
-      memory.push({ role: "user", content: q });
-      if (memory.length > 6) memory = memory.slice(-6);
+      memory.push({ role: 'user', content: q });
+      if (memory.length > 4) memory = memory.slice(-4);
 
       try {
         const reply = await callAI(sys, memory);
-        memory.push({ role: "assistant", content: reply });
-        if (mode === "CODE" || reply.includes("```")) {
+        memory.push({ role: 'assistant', content: reply });
+        if (mode === 'CODE' || /```/.test(reply)) {
           $('workspace').classList.remove('hidden');
           $('workspace').innerHTML = reply.replace(/```(\w+)?([\s\S]*?)```/g, '<pre class="bg-black/80 p-2 rounded text-cyan-300 font-mono overflow-x-auto"><code>$2</code></pre>');
         }
-        speak(reply.split("```")[0].trim() || "Code ready on screen.");
-      } catch (e) { speak("Connection interrupted. Tap SETUP and hit FREE AI.", "STANDBY"); }
+        const spoken = String(reply).split('```')[0].trim() || 'Code ready on screen.';
+        speak(spoken.length > 180 ? spoken.slice(0, 180) + '...' : spoken);
+      } catch (e) {
+        speak('Connection interrupted. Tap SETUP and hit FREE AI.', 'STANDBY');
+      }
     }
 
     function setHud(s) {
       state = s;
-      const c = s === "LISTENING" || s === "THINKING" ? "#00e5ff" : "#ff1744";
+      const c = s === 'LISTENING' || s === 'THINKING' ? '#00e5ff' : '#ff1744';
       $('status-hud').style.borderColor = $('micBtn').style.borderColor = c;
       $('dot').style.background = c; $('sub-badge').innerText = s;
-      const map = { OFF: ["E.V. CORE OFFLINE", "TAP TO LINK E.V."], STANDBY: ["SAY 'HEY E.V.'", "TAP TO TALK"], LISTENING: [`LISTENING${NAME ? " TO " + NAME.toUpperCase() : ""}...`, "LISTENING..."], THINKING: ["PROCESSING...", "COMPUTING..."], SPEAKING: ["E.V. LIVE", "TAP TO INTERRUPT"] };
-      [$('status-text').innerText, $('micBtn').innerText] = map[s];
+      const map = {
+        OFF: ['E.V. CORE OFFLINE', 'TAP TO LINK E.V.'],
+        STANDBY: ["SAY 'HEY E.V.'", 'TAP TO TALK'],
+        LISTENING: [NAME ? `LISTENING TO ${NAME.toUpperCase()}...` : 'LISTENING...', 'LISTENING...'],
+        THINKING: ['PROCESSING...', 'THINKING...'],
+        SPEAKING: ['RESPONDING...', 'SPEAKING...']
+      };
+      [$('status-text').innerText, $('micBtn').innerText] = map[s] || map.STANDBY;
     }
 
     $('micBtn').onclick = () => {
       beep();
-      if (state === "SPEAKING") { speechSynthesis.cancel(); setHud("LISTENING"); if (rec) try { rec.start(); } catch (e) {} }
-      else speak(state === "OFF" ? (NAME ? `E.V. online. Ready, ${NAME}.` : "E.V. live core online. What's your name?") : "Listening.");
+      if (state === 'SPEAKING') {
+        speechSynthesis.cancel(); setHud('LISTENING'); if (rec) try { rec.start(); } catch (e) {}
+      } else {
+        const greeting = state === 'OFF' ? (NAME ? `E.V. online. Ready, ${NAME}.` : 'E.V. live core online. What is your name?') : 'Listening.';
+        speak(greeting);
+      }
     };
 
-    window.onload = () => { init3D(); setHud("OFF"); };
-    window.onresize = () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); };
+    window.onload = () => {
+      renderApps('');
+      init3D();
+      setHud('OFF');
+    };
+    window.onresize = () => {
+      if (camera && renderer) {
+        camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight);
+      }
+    };
   </script>
 </body>
 </html>
