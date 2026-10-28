@@ -99,7 +99,7 @@
     const APP_SCHEMES = {
       'whatsapp': 'whatsapp://',
       'youtube': 'vnd.youtube://',
-      'instagram': 'instagram://',
+      'instagram': 'instagram://app',
       'twitter': 'twitter://',
       'x': 'twitter://',
       'facebook': 'fb://',
@@ -109,11 +109,28 @@
       'telegram': 'tg://',
       'reddit': 'reddit://',
       'pinterest': 'pinterest://',
+      
+      // Native / Built-in Apps
       'mail': 'mailto:',
+      'email': 'mailto:',
       'messages': 'sms:',
+      'sms': 'sms:',
       'phone': 'tel:',
+      'call': 'tel:',
+      'settings': 'app-settings:',
+      'calendar': 'calshow://',
+      'clock': 'clock://',
+      'calculator': 'calculator://',
+      
+      // Google Apps
       'maps': 'geo:0,0?q=',
-      'settings': 'app-settings:'
+      'googlemaps': 'googlemaps://',
+      'gmail': 'googlegmail://',
+      'googledrive': 'googledrive://',
+      'drive': 'googledrive://',
+      'googlephotos': 'googlephotos://',
+      'photos': 'googlephotos://',
+      'chrome': 'googlechrome://'
     };
 
     function attemptOpenApp(txt) {
@@ -123,15 +140,22 @@
         const appName = match[1].toLowerCase().trim().replace(/ /g, ''); // normalize spaces
         if (APP_SCHEMES[appName]) {
            setHud("STANDBY");
-           toast(`Executing Deep Link: ${appName}`);
-           speak(`Opening ${appName}.`, "STANDBY");
+           toast(`Executing Deep Link: ${match[1]}`);
+           speak(`Opening ${match[1]}.`, "STANDBY");
            
-           // Direct anchor click bypasses mobile popup/redirect blockers much better
-           const link = document.createElement('a');
-           link.href = APP_SCHEMES[appName];
-           document.body.appendChild(link);
-           link.click();
-           document.body.removeChild(link);
+           setTimeout(() => {
+             try {
+               // Method 1: Direct override (Best for custom schemes on mobile)
+               window.location.href = APP_SCHEMES[appName];
+             } catch(e) {
+               // Method 2: Anchor fallback
+               const link = document.createElement('a');
+               link.href = APP_SCHEMES[appName];
+               document.body.appendChild(link);
+               link.click();
+               document.body.removeChild(link);
+             }
+           }, 800); // Slight delay to let speech synthesis start
            
            return true;
         } else {
