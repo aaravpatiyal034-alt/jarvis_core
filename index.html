@@ -122,17 +122,20 @@
       if (match) {
         const appName = match[1].toLowerCase().trim().replace(/ /g, ''); // normalize spaces
         if (APP_SCHEMES[appName]) {
-           setHud("THINKING");
+           setHud("STANDBY");
            toast(`Executing Deep Link: ${appName}`);
-           speak(`Opening ${appName}.`);
-           // Delay to allow speech to start before the browser attempts to redirect
-           setTimeout(() => { 
-             location.href = APP_SCHEMES[appName]; 
-             setHud("STANDBY");
-           }, 1500);
+           speak(`Opening ${appName}.`, "STANDBY");
+           
+           // Direct anchor click bypasses mobile popup/redirect blockers much better
+           const link = document.createElement('a');
+           link.href = APP_SCHEMES[appName];
+           document.body.appendChild(link);
+           link.click();
+           document.body.removeChild(link);
+           
            return true;
         } else {
-           speak(`I cannot open ${match[1]} directly from the web browser. Mobile security protocols prevent this.`);
+           speak(`I cannot open ${match[1]} directly from the web browser. Mobile security protocols prevent this.`, "LISTENING");
            return true;
         }
       }
@@ -290,17 +293,34 @@
 
     function setHud(s) {
       state = s;
-      const c = s === "LISTENING" || s === "THINKING" ? "#00e5ff" : "#ff1744";
+      const c = s === "LISTENING" || s === "THINKING" ? "#00e5ff" : (s === "STANDBY" ? "#fbbf24" : "#ff1744");
       $('status-hud').style.borderColor = $('micBtn').style.borderColor = c;
       $('dot').style.background = c; $('sub-badge').innerText = s;
-      const map = { OFF: ["E.V. CORE OFFLINE", "TAP TO LINK E.V."], STANDBY: ["SAY 'HEY E.V.'", "TAP TO TALK"], LISTENING: [`LISTENING${NAME ? " TO " + NAME.toUpperCase() : ""}...`, "LISTENING..."], THINKING: ["PROCESSING...", "COMPUTING..."], SPEAKING: ["E.V. LIVE", "TAP TO INTERRUPT"] };
+      const map = { 
+        OFF: ["E.V. CORE OFFLINE", "TAP TO LINK E.V."], 
+        STANDBY: ["STANDBY MODE ACTIVE", "TAP TO WAKE UP"], 
+        LISTENING: [`LISTENING${NAME ? " TO " + NAME.toUpperCase() : ""}...`, "TAP FOR STANDBY"], 
+        THINKING: ["PROCESSING...", "COMPUTING..."], 
+        SPEAKING: ["E.V. LIVE", "TAP TO INTERRUPT"] 
+      };
       [$('status-text').innerText, $('micBtn').innerText] = map[s];
     }
 
     $('micBtn').onclick = () => {
       beep();
-      if (state === "SPEAKING") { speechSynthesis.cancel(); setHud("LISTENING"); if (rec) try { rec.start(); } catch (e) {} }
-      else speak(state === "OFF" ? (NAME ? `E.V. online. Ready, ${NAME}.` : "E.V. live core online. What's your name?") : "Listening.");
+      if (state === "OFF") {
+        speak(NAME ? `E.V. online. Ready, ${NAME}.` : "E.V. live core online. What's your name?");
+      } else if (state === "SPEAKING") { 
+        speechSynthesis.cancel(); 
+        setHud("STANDBY"); 
+        if (rec) try { rec.start(); } catch (e) {} 
+      } else if (state === "LISTENING") {
+        setHud("STANDBY");
+        toast("Standby Mode: Say 'Hey E.V.' to wake");
+      } else if (state === "STANDBY" || state === "THINKING") {
+        setHud("LISTENING");
+        beep(900);
+      }
     };
 
     window.onload = () => { init3D(); setHud("OFF"); };
