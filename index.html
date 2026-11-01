@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>E.V. Mobile AI</title>
+  <title>E.V. AI</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
@@ -20,14 +20,14 @@
     <div class="flex items-center gap-1.5">
       <div id="hud" class="flex-1 bg-[#040b18]/85 border border-[#ff1744] px-3 py-1.5 rounded-full flex items-center gap-2 backdrop-blur-md">
         <span id="dot" class="w-2 h-2 rounded-full bg-[#ff1744] shadow-[0_0_8px_#ff1744]"></span>
-        <span id="st-txt" class="text-[10px] font-bold tracking-wider uppercase truncate">E.V. OFFLINE</span>
+        <span id="st-txt" class="text-[10px] font-bold tracking-wider uppercase truncate">E.V. CORE OFFLINE</span>
       </div>
-      <button onclick="toggleKeyBar()" class="bg-[#040b18]/80 border border-[#ff1744]/70 text-[#ff1744] px-3 py-1.5 rounded-full text-[10px] font-bold">SETUP</button>
+      <button onclick="$('key-bar').classList.toggle('hidden')" class="bg-[#040b18]/80 border border-[#ff1744]/70 text-[#ff1744] px-3 py-1.5 rounded-full text-[10px] font-bold">SETUP</button>
     </div>
     <div id="key-bar" class="hidden flex gap-1.5 bg-[#040b18]/95 border border-cyan-500/40 p-2 rounded-xl backdrop-blur-md">
       <input id="name-in" placeholder="Name" class="w-1/3 bg-black/60 border border-[#ff1744]/40 rounded-lg px-2 py-1 text-xs text-white outline-none">
-      <input id="key-in" type="password" placeholder="Groq (gsk_) / Gemini (AIza)" class="flex-1 bg-black/60 border border-cyan-500/40 rounded-lg px-2 py-1 text-xs text-white outline-none">
-      <button onclick="saveProfile()" class="bg-[#ff1744] text-white text-[10px] font-bold px-2.5 rounded-lg">SAVE</button>
+      <input id="key-in" type="password" placeholder="Groq (gsk_) / Gemini (AIza) / Leave blank" class="flex-1 bg-black/60 border border-cyan-500/40 rounded-lg px-2 py-1 text-xs text-white outline-none">
+      <button onclick="save()" class="bg-[#ff1744] text-white text-[10px] font-bold px-2.5 rounded-lg">SAVE</button>
     </div>
   </header>
 
@@ -36,21 +36,21 @@
     <div id="workspace" class="hidden pointer-events-auto max-h-[30dvh] bg-[#030916]/95 border border-cyan-500/40 rounded-xl p-2.5 overflow-y-auto text-[11px] font-mono text-cyan-300"></div>
     <div class="pointer-events-auto bg-[#040b18]/85 border border-cyan-500/30 rounded-xl p-2.5 backdrop-blur-md">
       <div class="flex justify-between text-[9px] font-bold tracking-widest text-[#ff1744] uppercase mb-0.5">
-        <span id="u-tag">E.V. AI</span><span id="badge" class="text-cyan-400">OFF</span>
+        <span id="u-tag">E.V. LIVE NEURAL AI</span><span id="badge" class="text-cyan-400">OFF</span>
       </div>
       <p id="sub" class="text-xs text-slate-100 line-clamp-2">"Tap below to connect."</p>
-      <a id="app-btn" href="#" target="_blank" class="hidden mt-2 inline-flex items-center justify-center bg-cyan-600 text-white text-xs font-bold py-1.5 px-3 rounded-lg w-full">🚀 Open App</a>
+      <a id="app-btn" href="#" class="hidden mt-2 inline-flex items-center justify-center bg-cyan-600 text-white text-xs font-bold py-1.5 px-3 rounded-lg w-full">🚀 Open App</a>
     </div>
   </main>
 
-  <!-- CONTROLS -->
+  <!-- FOOTER -->
   <footer class="relative z-10 flex flex-col gap-1.5">
     <div class="flex gap-1.5">
       <button id="mic" onclick="toggleMic()" class="flex-1 bg-gradient-to-r from-[#ff1744]/30 to-cyan-500/30 border-2 border-[#ff1744] text-white py-3 rounded-full text-xs font-bold tracking-widest uppercase active:scale-95 transition">TAP TO LINK</button>
       <button onclick="$('chat-form').classList.toggle('hidden')" class="bg-[#050d1f] border border-cyan-400/50 text-cyan-300 px-3.5 rounded-full text-xs">⌨️</button>
     </div>
     <form id="chat-form" onsubmit="event.preventDefault(); askEV($('chat-in').value); $('chat-in').value='';" class="hidden flex gap-1.5">
-      <input id="chat-in" placeholder="Ask or say 'open youtube lofi'..." class="flex-1 bg-[#040b18] border border-cyan-400/50 rounded-full px-3 py-1.5 text-xs text-white outline-none">
+      <input id="chat-in" placeholder="Ask or say 'open whatsapp'..." class="flex-1 bg-[#040b18] border border-cyan-400/50 rounded-full px-3 py-1.5 text-xs text-white outline-none">
       <button class="bg-[#ff1744] text-white text-[10px] font-bold px-3 rounded-full">SEND</button>
     </form>
   </footer>
@@ -62,43 +62,53 @@
     const syncTag = () => $('u-tag').innerText = NAME ? `E.V. // ${NAME.toUpperCase()}` : "E.V. AI";
     syncTag();
 
-    const toggleKeyBar = () => $('key-bar').classList.toggle('hidden');
-    function saveProfile() {
+    function save() {
       KEY = $('key-in').value.trim(); NAME = $('name-in').value.trim();
       localStorage.setItem('ev_k', KEY); localStorage.setItem('ev_n', NAME);
-      syncTag(); toggleKeyBar();
+      syncTag(); $('key-bar').classList.add('hidden');
     }
 
-    // --- APP LAUNCHER (Universal Deep Links) ---
+    // --- APP LAUNCHER (Fixed WhatsApp & Deep Links) ---
     function openApp(q) {
-      const match = (r) => r.test(q);
-      const param = q.replace(/open|search|play|for|whatsapp|youtube|spotify|maps|directions/gi, "").trim();
+      const param = q.replace(/open|launch|start|search|for|whatsapp|youtube|spotify|maps/gi, "").trim();
       let url = null, name = "";
 
-      if (match(/youtube/i)) { url = param ? `https://www.youtube.com/results?search_query=${encodeURIComponent(param)}` : 'https://www.youtube.com'; name = "YouTube"; }
-      else if (match(/whatsapp/i)) { url = 'https://api.whatsapp.com/send'; name = "WhatsApp"; }
-      else if (match(/spotify/i)) { url = param ? `https://open.spotify.com/search/${encodeURIComponent(param)}` : 'https://open.spotify.com'; name = "Spotify"; }
-      else if (match(/maps|navigate/i)) { url = param ? `https://www.google.com/maps/search/${encodeURIComponent(param)}` : 'https://maps.google.com'; name = "Maps"; }
-      else if (match(/^(google|search)\b/i)) { url = `https://www.google.com/search?q=${encodeURIComponent(param)}`; name = "Google"; }
+      if (/whatsapp/i.test(q)) {
+        name = "WhatsApp";
+        // whatsapp:// launches the app directly without "chat couldn't link" popup
+        url = param ? `whatsapp://send?text=${encodeURIComponent(param)}` : "whatsapp://";
+      } else if (/youtube/i.test(q)) {
+        name = "YouTube";
+        url = param ? `https://www.youtube.com/results?search_query=${encodeURIComponent(param)}` : "https://www.youtube.com";
+      } else if (/spotify/i.test(q)) {
+        name = "Spotify";
+        url = param ? `https://open.spotify.com/search/${encodeURIComponent(param)}` : "https://open.spotify.com";
+      } else if (/maps|navigate/i.test(q)) {
+        name = "Maps";
+        url = param ? `https://www.google.com/maps/search/${encodeURIComponent(param)}` : "https://maps.google.com";
+      } else if (/^(search|google)\b/i.test(q)) {
+        name = "Google";
+        url = `https://www.google.com/search?q=${encodeURIComponent(param)}`;
+      }
 
       if (url) {
         speak(`Opening ${name}.`);
-        const btn = $('app-btn'); btn.href = url; btn.innerText = `🚀 Open ${name} Now`;
+        const btn = $('app-btn');
+        btn.href = url; btn.innerText = `🚀 Launch ${name} Now`;
         btn.classList.remove('hidden');
-        setTimeout(() => location.href = url, 300);
+        window.location.href = url;
         setTimeout(() => btn.classList.add('hidden'), 8000);
         return true;
       }
       return false;
     }
 
-    // --- 3D ORB ---
+    // --- 3D VISUALIZER ---
     let scene, cam, ren, core, pts, base;
     const clock = new THREE.Clock();
     function init3D() {
       scene = new THREE.Scene();
-      cam = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
-      cam.position.z = 2.4;
+      cam = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100); cam.position.z = 2.4;
       ren = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       ren.setSize(innerWidth, innerHeight);
       ren.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -125,14 +135,14 @@
       })();
     }
 
-    // --- VOICE & AI ---
+    // --- SPEECH RECOGNITION & TTS ---
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = SR ? new SR() : null;
     if (rec) {
       rec.continuous = true;
       rec.onresult = e => {
         const txt = e.results[e.results.length - 1][0].transcript.trim();
-        if (/open|search|youtube|whatsapp|spotify|maps/i.test(txt) && openApp(txt)) return;
+        if (/open|search|whatsapp|youtube|spotify|maps/i.test(txt) && openApp(txt)) return;
         askEV(txt);
       };
       rec.onend = () => { if (state !== "OFF" && state !== "SPEAKING") try { rec.start(); } catch(e){} };
@@ -141,52 +151,60 @@
     function speak(txt) {
       speechSynthesis.cancel(); if (rec) try { rec.stop(); } catch(e){}
       setHud("SPEAKING");
-      const clean = txt.replace(/```[\s\S]*?```/g, "Code displayed.").replace(/[#*`_]/g, "");
+      const clean = txt.replace(/```[\s\S]*?```/g, "Result displayed.").replace(/[#*`_]/g, "");
       $('sub').innerText = `"${clean}"`;
       const u = new SpeechSynthesisUtterance(clean);
       u.onend = u.onerror = () => { setHud("LISTENING"); if (rec) try { rec.start(); } catch(e){} };
       speechSynthesis.speak(u);
     }
 
-    async function callAI(sys, msgs) {
+    // --- AI CALL (With Bulletproof Direct Plaintext Fallback) ---
+    async function callAI(sys, q) {
+      // 1. Google Gemini Key
       if (KEY.startsWith("AIza")) {
-        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${KEY}`, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] }, contents: msgs.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })) })
-        }).then(r => r.json());
-        return r?.candidates?.[0]?.content?.parts?.[0]?.text;
+        try {
+          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${KEY}`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ parts: [{ text: `${sys}\nUser: ${q}` }] }] })
+          });
+          const d = await r.json();
+          if (d?.candidates?.[0]?.content?.parts?.[0]?.text) return d.candidates[0].content.parts[0].text;
+        } catch(e) {}
       }
+      // 2. Groq Key
       if (KEY.startsWith("gsk_")) {
-        const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + KEY },
-          body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{ role: "system", content: sys }, ...msgs], max_tokens: 300 })
-        }).then(r => r.json());
-        return r.choices?.[0]?.message?.content;
+        try {
+          const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + KEY },
+            body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{ role: "system", content: sys }, { role: "user", content: q }], max_tokens: 250 })
+          });
+          const d = await r.json();
+          if (d?.choices?.[0]?.message?.content) return d.choices[0].message.content;
+        } catch(e) {}
       }
-      const r = await fetch("https://text.pollinations.ai/openai", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "openai", messages: [{ role: "system", content: sys }, ...msgs] })
-      }).then(r => r.json());
-      return r.choices[0].message.content;
+      // 3. Resilient Free Plain-Text Engine (Never throws JSON CORS errors)
+      const prompt = encodeURIComponent(`${sys} Question: ${q}`);
+      const res = await fetch(`https://text.pollinations.ai/${prompt}?model=openai`);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return await res.text();
     }
 
     async function askEV(q) {
       if (!q) return;
-      if (/open|search|youtube|whatsapp|spotify|maps/i.test(q) && openApp(q)) return;
+      if (/open|search|whatsapp|youtube|spotify|maps/i.test(q) && openApp(q)) return;
       setHud("THINKING"); $('sub').innerText = `You: "${q}"`;
-      const sys = `You are E.V., a live voice assistant. User: ${NAME || "user"}. Answer in 1-2 short sentences. Put code inside markdown blocks.`;
-      mem.push({ role: "user", content: q });
-      if (mem.length > 6) mem = mem.slice(-6);
+      const sys = `You are E.V., an AI voice assistant. User name: ${NAME || "friend"}. Reply in 1 or 2 concise, plain sentences.`;
 
       try {
-        const ans = await callAI(sys, mem);
-        mem.push({ role: "assistant", content: ans });
+        const ans = await callAI(sys, q);
         if (ans.includes("```")) {
           $('workspace').classList.remove('hidden');
           $('workspace').innerText = ans.match(/```(?:\w+)?([\s\S]*?)```/)[1] || ans;
         }
-        speak(ans.split("```")[0].trim() || "Displayed on screen.");
-      } catch (e) { speak("Connection lost. Check key or network."); }
+        speak(ans.split("```")[0].trim());
+      } catch (e) {
+        speak("I had trouble reaching the network. Please verify your connection or key.");
+      }
     }
 
     function setHud(s) {
