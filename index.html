@@ -51,7 +51,7 @@
       <button onclick="$('chat-form').classList.toggle('hidden')" class="bg-[#050d1f] border border-cyan-400/50 text-cyan-300 px-3.5 rounded-full text-xs">⌨️</button>
     </div>
     <form id="chat-form" onsubmit="event.preventDefault();askEV($('chat-in').value);$('chat-in').value='';" class="hidden flex gap-1.5">
-      <input id="chat-in" placeholder="Say 'open camera', 'deep research AI'..." class="flex-1 bg-[#040b18] border border-cyan-400/50 rounded-full px-3 py-1.5 text-xs text-white outline-none">
+      <input id="chat-in" placeholder="Say 'open camera', 'deep research quantum computing'..." class="flex-1 bg-[#040b18] border border-cyan-400/50 rounded-full px-3 py-1.5 text-xs text-white outline-none">
       <button class="bg-[#ff1744] text-white text-[10px] font-bold px-3 rounded-full">SEND</button>
     </form>
   </footer>
@@ -140,65 +140,81 @@
     if (rec) {
       rec.continuous = true;
       rec.onresult = e => {
-        const q = e.results[e.results.length - 1][0].transcript.trim(), l = q.toLowerCase();
-        if (state === "STANDBY") { if (/wake up|activate|online|hey ev|ev/i.test(l)) wakeUp(); return; }
-        if (/standby|go to sleep|sleep mode/i.test(l)) { enterStandby(true); return; }
-        const rMatch = l.match(/^(?:deep\s+research|research|deep\s+dive)\s+(?:on|into|about)?\s*(.+)/i);
-        if (rMatch) { deepResearch(rMatch[1]); return; }
-        if (launchApp(q)) return;
+        const q = e.results[e.results.length - 1][0].transcript.trim();
+        if (state === "STANDBY") { if (/wake up|activate|online|hey ev|ev/i.test(q)) wakeUp(); return; }
         askEV(q);
       };
       rec.onend = () => recStart();
     }
 
-    function speak(txt) {
+    function speak(txt, nextState = "LISTENING") {
       speechSynthesis.cancel(); clearTimeout(sTimer); if (rec) try { rec.stop(); } catch(e){}
       setHud("SPEAKING"); const clean = txt.replace(/```[\s\S]*?```/g, "Code on screen.").replace(/[#*`_]/g, "");
       $('sub').innerText = `"${clean}"`;
       const u = new SpeechSynthesisUtterance(clean);
-      u.onend = u.onerror = () => { setHud("LISTENING"); recStart(); resetTimer(); };
+      u.onend = u.onerror = () => { setHud(nextState); recStart(); resetTimer(); };
       speechSynthesis.speak(u);
     }
 
-    // --- AI & DEEP RESEARCH ENGINE ---
+    // --- AI CORE & ROBUST DEEP RESEARCH ---
     async function callAI(sys, q) {
       if (KEY.startsWith("AIza")) {
-        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${KEY}`, {
-          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: `${sys}\n${q}` }] }] })
-        });
-        return (await r.json())?.candidates?.[0]?.content?.parts?.[0]?.text;
+        try {
+          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${KEY}`, {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: `${sys}\nUser: ${q}` }] }] })
+          });
+          const d = await r.json();
+          if (d?.candidates?.[0]?.content?.parts?.[0]?.text) return d.candidates[0].content.parts[0].text;
+        } catch(e){}
       }
       if (KEY.startsWith("gsk_")) {
-        const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + KEY },
-          body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{ role: "system", content: sys }, { role: "user", content: q }], max_tokens: 650 })
-        });
-        return (await r.json())?.choices?.[0]?.message?.content;
+        try {
+          const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + KEY },
+            body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{ role: "system", content: sys }, { role: "user", content: q }], max_tokens: 1200 })
+          });
+          const d = await r.json();
+          if (d?.choices?.[0]?.message?.content) return d.choices[0].message.content;
+        } catch(e){}
       }
-      return await (await fetch(`https://text.pollinations.ai/${encodeURIComponent(sys + " Question: " + q)}?model=openai`)).text();
+      // Direct POST API avoiding URL length limits
+      const res = await fetch("https://text.pollinations.ai/", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "system", content: sys }, { role: "user", content: q }], model: "openai" })
+      });
+      return await res.text();
     }
 
     async function deepResearch(topic) {
       setHud("THINKING"); $('sub').innerText = `Conducting Deep Research: "${topic}"...`;
-      speechSynthesis.speak(new SpeechSynthesisUtterance(`Initiating deep research on ${topic}. Mining intelligence.`));
+      speak(`Initiating deep research on ${topic}. Mining intelligence.`, "THINKING");
       let ctx = "";
       try {
         const w = await (await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(topic)}&utf8=&format=json&origin=*`)).json();
-        ctx = w?.query?.search?.slice(0, 3).map(s => s.snippet.replace(/<[^>]+>/g, '')).join("\n") || "";
+        ctx = w?.query?.search?.slice(0, 3).map(s => s.snippet.replace(/<[^>]+>/g, '')).join(". ") || "";
       } catch(e){}
-      const sys = `You are E.V. Deep Research Agent. Build an exhaustive dossier on: "${topic}" using context: "${ctx}". Output sections: # DOSSIER: ${topic.toUpperCase()}, ## EXECUTIVE SUMMARY, ## CORE ANALYSIS, ## IMPLICATIONS. End with [BRIEFING] 2-sentence summary.`;
+      const sys = `You are E.V. Deep Research Agent. Build an exhaustive dossier on: "${topic}". Telemetry Context: "${ctx}". Output structured sections:
+# DOSSIER: ${topic.toUpperCase()}
+## 1. EXECUTIVE SUMMARY
+## 2. CORE ANALYSIS & ARCHITECTURE
+## 3. IMPLICATIONS & CURRENT STATE
+## 4. FUTURE HORIZON
+Conclude with [BRIEFING] followed by a 2-sentence summary for vocal briefing.`;
       try {
         const d = await callAI(sys, topic);
         $('workspace').classList.remove('hidden');
-        $('workspace').innerText = d.replace(/\[BRIEFING\][\s\S]*$/, "").trim();
-        speak((d.match(/\[BRIEFING\]([\s\S]*)/i)?.[1] || `Research compiled on ${topic}.`).trim());
-      } catch(e) { speak("Deep research failed. Check connection."); }
+        $('workspace').innerText = d.replace(/\[BRIEFING\][\s\S]*$/i, "").trim();
+        const briefing = d.match(/\[BRIEFING\]\s*([\s\S]*)/i)?.[1]?.trim() || `Deep research dossier on ${topic} compiled and active in workspace.`;
+        speak(briefing);
+      } catch(e) {
+        speak("Deep research telemetry failed. Please check network link.");
+      }
     }
 
     async function askEV(q) {
       if (!q) return; clearTimeout(sTimer);
-      if (/standby|go to sleep/i.test(q)) { enterStandby(true); return; }
-      const r = q.toLowerCase().match(/^(?:deep\s+research|research|deep\s+dive)\s+(?:on|into|about)?\s*(.+)/i);
+      if (/standby|go to sleep|sleep mode/i.test(q)) { enterStandby(true); return; }
+      const r = q.toLowerCase().match(/(?:deep\s+research|research|deep\s+dive)(?:\s+(?:on|about|into))?\s+(.+)/i);
       if (r) { deepResearch(r[1]); return; }
       if (launchApp(q)) return;
       setHud("THINKING"); $('sub').innerText = `You: "${q}"`;
