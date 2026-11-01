@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>E.V. AI • Full OS Bridge</title>
+  <title>E.V. AI • Direct Voice Calling</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
@@ -15,7 +15,7 @@
 <body class="flex flex-col justify-between p-3.5 max-w-md mx-auto">
   <div id="c-box"></div><div class="hud"></div>
 
-  <!-- HIDDEN OS HARDWARE BRIDGES -->
+  <!-- HIDDEN HARDWARE HOOKS -->
   <input type="file" id="cam-bridge" accept="image/*" capture="environment" class="hidden">
   <input type="file" id="gal-bridge" accept="image/*,video/*" class="hidden">
 
@@ -28,10 +28,15 @@
       </div>
       <button onclick="$('key-bar').classList.toggle('hidden')" class="bg-[#040b18]/80 border border-[#ff1744]/70 text-[#ff1744] px-3 py-1.5 rounded-full text-[10px] font-bold">SETUP</button>
     </div>
-    <div id="key-bar" class="hidden flex gap-1.5 bg-[#040b18]/95 border border-cyan-500/40 p-2 rounded-xl backdrop-blur-md">
-      <input id="name-in" placeholder="Name" class="w-1/3 bg-black/60 border border-[#ff1744]/40 rounded-lg px-2 py-1 text-xs text-white outline-none">
-      <input id="key-in" type="password" placeholder="Optional Groq/Gemini Key" class="flex-1 bg-black/60 border border-cyan-500/40 rounded-lg px-2 py-1 text-xs text-white outline-none">
-      <button onclick="save()" class="bg-[#ff1744] text-white text-[10px] font-bold px-2.5 rounded-lg">SAVE</button>
+    
+    <!-- SETUP & CONTACTS -->
+    <div id="key-bar" class="hidden flex flex-col gap-1.5 bg-[#040b18]/95 border border-cyan-500/40 p-2.5 rounded-xl backdrop-blur-md">
+      <div class="flex gap-1.5">
+        <input id="name-in" placeholder="Name" class="w-1/3 bg-black/60 border border-[#ff1744]/40 rounded-lg px-2 py-1 text-xs text-white outline-none">
+        <input id="key-in" type="password" placeholder="Groq/Gemini Key (Optional)" class="flex-1 bg-black/60 border border-cyan-500/40 rounded-lg px-2 py-1 text-xs text-white outline-none">
+        <button onclick="saveProfile()" class="bg-[#ff1744] text-white text-[10px] font-bold px-2 rounded-lg">SAVE</button>
+      </div>
+      <button onclick="syncPhoneContacts()" class="w-full bg-cyan-700/60 hover:bg-cyan-600 border border-cyan-400/40 text-cyan-200 text-[10px] font-bold py-1.5 rounded-lg transition">📱 SYNC PHONE CONTACTS</button>
     </div>
   </header>
 
@@ -40,10 +45,9 @@
     <div id="workspace" class="hidden pointer-events-auto max-h-[28dvh] bg-[#030916]/95 border border-cyan-500/40 rounded-xl p-2.5 overflow-y-auto text-[11px] font-mono text-cyan-300"></div>
     <div class="pointer-events-auto bg-[#040b18]/85 border border-cyan-500/30 rounded-xl p-2.5 backdrop-blur-md">
       <div class="flex justify-between text-[9px] font-bold tracking-widest text-[#ff1744] uppercase mb-0.5">
-        <span id="u-tag">E.V. LIVE NEURAL AI</span><span id="badge" class="text-cyan-400">OFF</span>
+        <span id="u-tag">E.V. NEURAL SYSTEM</span><span id="badge" class="text-cyan-400">OFF</span>
       </div>
-      <p id="sub" class="text-xs text-slate-100 line-clamp-2">"Tap below to initialize."</p>
-      <a id="app-btn" href="#" class="hidden mt-2 inline-flex items-center justify-center bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-xs font-bold py-2 px-3 rounded-lg w-full transition active:scale-95 shadow-lg">🚀 Launch App</a>
+      <p id="sub" class="text-xs text-slate-100 line-clamp-2">"Tap below to connect."</p>
     </div>
   </main>
 
@@ -53,8 +57,8 @@
       <button id="mic" onclick="toggleMic()" class="flex-1 bg-gradient-to-r from-[#ff1744]/30 to-cyan-500/30 border-2 border-[#ff1744] text-white py-3 rounded-full text-xs font-bold tracking-widest uppercase active:scale-95 transition">TAP TO LINK</button>
       <button onclick="$('chat-form').classList.toggle('hidden')" class="bg-[#050d1f] border border-cyan-400/50 text-cyan-300 px-3.5 rounded-full text-xs">⌨️</button>
     </div>
-    <form id="chat-form" onsubmit="event.preventDefault(); askEV($('chat-in').value); $('chat-in').value='';" class="hidden flex gap-1.5">
-      <input id="chat-in" placeholder="Say 'open camera', 'open instagram', 'call 123'..." class="flex-1 bg-[#040b18] border border-cyan-400/50 rounded-full px-3 py-1.5 text-xs text-white outline-none">
+    <form id="chat-form" onsubmit="event.preventDefault(); handleInput($('chat-in').value); $('chat-in').value='';" class="hidden flex gap-1.5">
+      <input id="chat-in" placeholder="Say 'call Alex' or 'Alex number is 98765'..." class="flex-1 bg-[#040b18] border border-cyan-400/50 rounded-full px-3 py-1.5 text-xs text-white outline-none">
       <button class="bg-[#ff1744] text-white text-[10px] font-bold px-3 rounded-full">SEND</button>
     </form>
   </footer>
@@ -62,110 +66,141 @@
   <script>
     const $ = id => document.getElementById(id);
     let KEY = localStorage.getItem('ev_k') || "", NAME = localStorage.getItem('ev_n') || "", state = "OFF";
+    let CONTACTS = JSON.parse(localStorage.getItem('ev_contacts') || "{}");
     const isDroid = /android/i.test(navigator.userAgent);
+
     $('key-in').value = KEY; $('name-in').value = NAME;
     const syncTag = () => $('u-tag').innerText = NAME ? `E.V. // ${NAME.toUpperCase()}` : "E.V. SYSTEM";
     syncTag();
 
-    function save() {
+    function saveProfile() {
       KEY = $('key-in').value.trim(); NAME = $('name-in').value.trim();
       localStorage.setItem('ev_k', KEY); localStorage.setItem('ev_n', NAME);
       syncTag(); $('key-bar').classList.add('hidden');
     }
 
-    // --- COMPLETE A-Z OS & APP INTENT ENGINE ---
-    const APPS = {
-      // Hardware & System Tools
-      camera: () => { $('cam-bridge').click(); return { n: "Camera", u: null }; },
-      calculator: () => ({ n: "Calculator", u: isDroid ? "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.APP_CALCULATOR;end" : "https://www.google.com/search?q=calculator" }),
-      settings: () => ({ n: "Settings", u: isDroid ? "intent:#Intent;action=android.settings.SETTINGS;end" : "app-settings:" }),
-      clock: () => ({ n: "Clock & Alarms", u: isDroid ? "intent:#Intent;action=android.intent.action.SHOW_ALARMS;end" : "clock-alarm:" }),
-      alarm: () => ({ n: "Alarm", u: isDroid ? "intent:#Intent;action=android.intent.action.SHOW_ALARMS;end" : "clock-alarm:" }),
-      calendar: () => ({ n: "Calendar", u: isDroid ? "content://com.android.calendar/time/" : "calshow:" }),
-      gallery: () => { $('gal-bridge').click(); return { n: "Photos", u: isDroid ? "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.APP_GALLERY;end" : "photos-redirect:" }; },
-      photos: () => { $('gal-bridge').click(); return { n: "Photos", u: isDroid ? "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.APP_GALLERY;end" : "photos-redirect:" }; },
-      files: () => ({ n: "File Manager", u: isDroid ? "intent:#Intent;action=android.intent.action.OPEN_DOCUMENT;type=*/*;end" : "shareddocuments:" }),
-      call: (p) => ({ n: "Dialer", u: "tel:" + (p.match(/\d+/)?.[0] || "") }),
-      phone: (p) => ({ n: "Dialer", u: "tel:" + (p.match(/\d+/)?.[0] || "") }),
-      dialer: (p) => ({ n: "Dialer", u: "tel:" + (p.match(/\d+/)?.[0] || "") }),
-      sms: () => ({ n: "Messages", u: "sms:" }),
-      messages: () => ({ n: "Messages", u: "sms:" }),
-
-      // Popular A-Z Deep Links
-      amazon: () => ({ n: "Amazon", u: "amazon://" }),
-      chrome: () => ({ n: "Chrome", u: "googlechrome://" }),
-      discord: () => ({ n: "Discord", u: "discord://" }),
-      facebook: () => ({ n: "Facebook", u: "fb://" }),
-      github: () => ({ n: "GitHub", u: "https://github.com" }),
-      gmail: () => ({ n: "Gmail", u: "googlegmail://" }),
-      mail: () => ({ n: "Mail", u: "mailto:" }),
-      instagram: () => ({ n: "Instagram", u: "instagram://" }),
-      linkedin: () => ({ n: "LinkedIn", u: "linkedin://" }),
-      maps: (p) => ({ n: "Google Maps", u: p ? `https://www.google.com/maps/search/${encodeURIComponent(p)}` : "https://maps.google.com" }),
-      netflix: () => ({ n: "Netflix", u: "nflx://" }),
-      paytm: () => ({ n: "Paytm", u: "paytmmp://" }),
-      phonepe: () => ({ n: "PhonePe", u: "phonepe://" }),
-      pinterest: () => ({ n: "Pinterest", u: "pinterest://" }),
-      playstore: () => ({ n: "Play Store", u: "market://" }),
-      reddit: () => ({ n: "Reddit", u: "reddit://" }),
-      snapchat: () => ({ n: "Snapchat", u: "snapchat://" }),
-      spotify: (p) => ({ n: "Spotify", u: p ? `https://open.spotify.com/search/${encodeURIComponent(p)}` : "spotify://" }),
-      telegram: () => ({ n: "Telegram", u: "tg://resolve" }),
-      tiktok: () => ({ n: "TikTok", u: "tiktok://" }),
-      twitter: () => ({ n: "Twitter / X", u: "twitter://" }),
-      uber: () => ({ n: "Uber", u: "uber://" }),
-      whatsapp: (p) => ({ n: "WhatsApp", u: p ? `whatsapp://send?text=${encodeURIComponent(p)}` : "whatsapp://" }),
-      youtube: (p) => ({ n: "YouTube", u: p ? `https://www.youtube.com/results?search_query=${encodeURIComponent(p)}` : "https://www.youtube.com" }),
-      zomato: () => ({ n: "Zomato", u: "zomato://" })
-    };
-
-    function resolveApp(q) {
-      const clean = q.toLowerCase().replace(/^(open|launch|start|run|play|search)\s+(for\s+)?/i, "").trim();
-      const tokens = clean.split(/\s+/);
-      const target = tokens[0];
-      const param = tokens.slice(1).join(" ");
-
-      // 1. Direct registry lookup
-      for (const key in APPS) {
-        if (clean.includes(key)) return APPS[key](param || clean.replace(key, "").trim());
+    // --- DIRECT CALL & CONTACTS SYSTEM ---
+    async function syncPhoneContacts() {
+      if ('contacts' in navigator && 'select' in navigator.contacts) {
+        try {
+          const list = await navigator.contacts.select(['name', 'tel'], { multiple: true });
+          list.forEach(c => {
+            if (c.name?.[0] && c.tel?.[0]) {
+              CONTACTS[c.name[0].toLowerCase().trim()] = c.tel[0].replace(/\s+/g, '');
+            }
+          });
+          localStorage.setItem('ev_contacts', JSON.stringify(CONTACTS));
+          speak(`Synced ${list.length} contacts.`);
+        } catch(e) {}
+      } else {
+        speak("Native sync unavailable. Just say 'Alex's number is...' and I will remember it.");
       }
-
-      // 2. Fallback for ANY unknown App A to Z (Attempts Package intent / Store)
-      if (/^(open|launch|start|run)\b/i.test(q) && target.length > 1) {
-        const title = target.charAt(0).toUpperCase() + target.slice(1);
-        const url = isDroid ? `intent:#Intent;package=com.${target};end` : `https://${target}.com`;
-        return { n: title, u: url, generic: true };
-      }
-      return null;
+      $('key-bar').classList.add('hidden');
     }
 
-    function launchApp(q) {
-      const res = resolveApp(q);
-      if (!res) return false;
+    function directCall(target) {
+      let clean = target.replace(/^(call|dial|ring)\s+(my\s+)?/i, "").trim();
+      const numOnly = clean.replace(/[^0-9+]/g, '');
 
-      speak(`Launching ${res.n}.`);
-      if (res.u) {
-        const btn = $('app-btn');
-        btn.href = res.u;
-        btn.innerText = `🚀 Open ${res.n} Now`;
-        btn.classList.remove('hidden');
-
-        // Immediate redirection attempt
-        try { window.location.href = res.u; } catch (e) {}
-
-        // If generic app not installed, route to Play Store after timeout
-        if (res.generic && isDroid) {
-          setTimeout(() => {
-            btn.href = `market://search?q=${res.n}`;
-            btn.innerText = `🔍 Find ${res.n} in Store`;
-          }, 1500);
-        }
-        setTimeout(() => btn.classList.add('hidden'), 9000);
+      // 1. Raw phone number given
+      if (numOnly.length >= 3 && clean.match(/^[0-9+\s-]+$/)) {
+        speak(`Dialing ${numOnly}.`);
+        window.location.href = `tel:${numOnly}`;
+        return true;
       }
+
+      // 2. Name lookup in Contact book
+      const nameKey = clean.toLowerCase();
+      let foundNum = CONTACTS[nameKey];
+
+      // Fuzzy check
+      if (!foundNum) {
+        const match = Object.keys(CONTACTS).find(k => k.includes(nameKey) || nameKey.includes(k));
+        if (match) foundNum = CONTACTS[match];
+      }
+
+      if (foundNum) {
+        speak(`Calling ${clean}.`);
+        window.location.href = `tel:${foundNum}`; // Direct zero-click call
+        return true;
+      }
+
+      // 3. Not found
+      speak(`I don't have ${clean}'s number. Say '${clean}'s number is...' to save it.`);
       return true;
     }
 
-    // --- 3D ORB ---
+    // --- A-TO-Z APP LAUNCHER ---
+    const APPS = {
+      camera: () => { $('cam-bridge').click(); return { n: "Camera", u: null }; },
+      calculator: () => ({ n: "Calculator", u: isDroid ? "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.APP_CALCULATOR;end" : "https://www.google.com/search?q=calculator" }),
+      settings: () => ({ n: "Settings", u: isDroid ? "intent:#Intent;action=android.settings.SETTINGS;end" : "app-settings:" }),
+      clock: () => ({ n: "Clock", u: isDroid ? "intent:#Intent;action=android.intent.action.SHOW_ALARMS;end" : "clock-alarm:" }),
+      calendar: () => ({ n: "Calendar", u: isDroid ? "content://com.android.calendar/time/" : "calshow:" }),
+      gallery: () => { $('gal-bridge').click(); return { n: "Gallery", u: null }; },
+      photos: () => { $('gal-bridge').click(); return { n: "Photos", u: null }; },
+      sms: () => ({ n: "Messages", u: "sms:" }),
+      messages: () => ({ n: "Messages", u: "sms:" }),
+      whatsapp: (p) => ({ n: "WhatsApp", u: p ? `whatsapp://send?text=${encodeURIComponent(p)}` : "whatsapp://" }),
+      youtube: (p) => ({ n: "YouTube", u: p ? `https://www.youtube.com/results?search_query=${encodeURIComponent(p)}` : "https://www.youtube.com" }),
+      spotify: (p) => ({ n: "Spotify", u: p ? `https://open.spotify.com/search/${encodeURIComponent(p)}` : "spotify://" }),
+      maps: (p) => ({ n: "Maps", u: p ? `https://www.google.com/maps/search/${encodeURIComponent(p)}` : "https://maps.google.com" }),
+      instagram: () => ({ n: "Instagram", u: "instagram://" }),
+      telegram: () => ({ n: "Telegram", u: "tg://resolve" }),
+      facebook: () => ({ n: "Facebook", u: "fb://" }),
+      twitter: () => ({ n: "X / Twitter", u: "twitter://" }),
+      netflix: () => ({ n: "Netflix", u: "nflx://" }),
+      snapchat: () => ({ n: "Snapchat", u: "snapchat://" }),
+      gmail: () => ({ n: "Gmail", u: "googlegmail://" }),
+      playstore: () => ({ n: "Play Store", u: "market://" })
+    };
+
+    function launchApp(q) {
+      const clean = q.toLowerCase().replace(/^(open|launch|start|run|play)\s+/i, "").trim();
+      for (const k in APPS) {
+        if (clean.includes(k)) {
+          const res = APPS[k](clean.replace(k, "").trim());
+          speak(`Opening ${res.n}.`);
+          if (res.u) window.location.href = res.u;
+          return true;
+        }
+      }
+      if (/^(open|launch)\b/i.test(q)) {
+        const app = clean.split(/\s+/)[0];
+        speak(`Launching ${app}.`);
+        window.location.href = isDroid ? `intent:#Intent;package=com.${app};end` : `https://${app}.com`;
+        return true;
+      }
+      return false;
+    }
+
+    // --- INPUT ROUTER ---
+    function handleInput(txt) {
+      if (!txt || txt.length < 2) return;
+
+      // 1. Voice contact assignment (e.g. "Mom's number is 9876543210")
+      const learn = txt.match(/([a-zA-Z]+)(?:'s)?\s*(?:number|phone)(?:\s*is)?\s*(\+?[0-9\s-]{4,15})/i);
+      if (learn) {
+        const n = learn[1].toLowerCase().trim(), num = learn[2].replace(/\s+/g, '');
+        CONTACTS[n] = num;
+        localStorage.setItem('ev_contacts', JSON.stringify(CONTACTS));
+        speak(`Saved ${learn[1]}'s number.`);
+        return;
+      }
+
+      // 2. Direct Call command
+      if (/^(call|dial|ring)\s+/i.test(txt)) {
+        if (directCall(txt)) return;
+      }
+
+      // 3. App Launch
+      if (launchApp(txt)) return;
+
+      // 4. Default AI chat
+      askEV(txt);
+    }
+
+    // --- 3D VISUALIZER ---
     let scene, cam, ren, core, pts, base;
     const clock = new THREE.Clock();
     function init3D() {
@@ -197,30 +232,26 @@
       })();
     }
 
-    // --- VOICE & SPEECH ---
+    // --- SPEECH RECOGNITION & TTS ---
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = SR ? new SR() : null;
     if (rec) {
       rec.continuous = true;
-      rec.onresult = e => {
-        const txt = e.results[e.results.length - 1][0].transcript.trim();
-        if (launchApp(txt)) return;
-        askEV(txt);
-      };
+      rec.onresult = e => handleInput(e.results[e.results.length - 1][0].transcript.trim());
       rec.onend = () => { if (state !== "OFF" && state !== "SPEAKING") try { rec.start(); } catch(e){} };
     }
 
     function speak(txt) {
       speechSynthesis.cancel(); if (rec) try { rec.stop(); } catch(e){}
       setHud("SPEAKING");
-      const clean = txt.replace(/```[\s\S]*?```/g, "Code displayed on screen.").replace(/[#*`_]/g, "");
+      const clean = txt.replace(/```[\s\S]*?```/g, "Code displayed.").replace(/[#*`_]/g, "");
       $('sub').innerText = `"${clean}"`;
       const u = new SpeechSynthesisUtterance(clean);
       u.onend = u.onerror = () => { setHud("LISTENING"); if (rec) try { rec.start(); } catch(e){} };
       speechSynthesis.speak(u);
     }
 
-    // --- BULLETPROOF AI PIPELINE ---
+    // --- AI PIPELINE ---
     async function callAI(sys, q) {
       if (KEY.startsWith("AIza")) {
         try {
@@ -242,18 +273,13 @@
           if (d?.choices?.[0]?.message?.content) return d.choices[0].message.content;
         } catch(e) {}
       }
-      // Reliable direct text endpoint
       const prompt = encodeURIComponent(`${sys} Question: ${q}`);
-      const res = await fetch(`https://text.pollinations.ai/${prompt}?model=openai`);
-      return await res.text();
+      return await (await fetch(`https://text.pollinations.ai/${prompt}?model=openai`)).text();
     }
 
     async function askEV(q) {
-      if (!q) return;
-      if (launchApp(q)) return;
       setHud("THINKING"); $('sub').innerText = `You: "${q}"`;
-      const sys = `You are E.V., an AI voice assistant. User: ${NAME || "friend"}. Reply concisely in 1-2 short sentences. Format code in markdown blocks.`;
-
+      const sys = `You are E.V., an AI voice assistant. User: ${NAME || "friend"}. Reply concisely in 1-2 plain sentences.`;
       try {
         const ans = await callAI(sys, q);
         if (ans.includes("```")) {
@@ -261,9 +287,7 @@
           $('workspace').innerText = ans.match(/```(?:\w+)?([\s\S]*?)```/)[1] || ans;
         }
         speak(ans.split("```")[0].trim());
-      } catch (e) {
-        speak("I am having trouble connecting. Tap setup to verify your key or network.");
-      }
+      } catch (e) { speak("Connection lost. Verify key or network."); }
     }
 
     function setHud(s) {
@@ -277,7 +301,7 @@
 
     function toggleMic() {
       if (state === "SPEAKING") { speechSynthesis.cancel(); setHud("LISTENING"); if (rec) try { rec.start(); } catch(e){} }
-      else if (state === "OFF") { speak(NAME ? `Online, ${NAME}.` : "E.V. system online."); }
+      else if (state === "OFF") { speak(NAME ? `Online, ${NAME}.` : "E.V. online."); }
       else { setHud("LISTENING"); if (rec) try { rec.start(); } catch(e){} }
     }
 
