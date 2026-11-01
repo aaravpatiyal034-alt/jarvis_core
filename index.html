@@ -2,22 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>E.V. AI • Standby & OS Bridge</title>
+  <title>E.V. AI • OS Bridge</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
-    * { box-sizing: border-box; margin:0; padding:0; user-select:none; -webkit-tap-highlight-color:transparent; }
-    body { width:100vw; height:100dvh; overflow:hidden; background:#02050e; color:#e2e8f0; font-family:system-ui,sans-serif; position:fixed; }
-    #c-box { position:absolute; inset:0; z-index:1; }
-    .hud { position:absolute; inset:0; z-index:2; pointer-events:none; background:radial-gradient(circle at 50% 50%, transparent 25%, #02050e 95%); }
+    *{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-tap-highlight-color:transparent}
+    body{width:100vw;height:100dvh;overflow:hidden;background:#02050e;color:#e2e8f0;font-family:system-ui,sans-serif;position:fixed}
+    #c-box{position:absolute;inset:0;z-index:1}.hud{position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(circle at 50% 50%,transparent 25%,#02050e 95%)}
   </style>
 </head>
 <body class="flex flex-col justify-between p-3.5 max-w-md mx-auto">
   <div id="c-box"></div><div class="hud"></div>
-
-  <!-- HIDDEN OS HOOKS -->
   <input type="file" id="cam-bridge" accept="image/*" capture="environment" class="hidden">
-  <input type="file" id="gal-bridge" accept="image/*" class="hidden">
+  <input type="file" id="gal-bridge" accept="image/*,video/*" class="hidden">
 
   <!-- HEADER -->
   <header class="relative z-10 flex flex-col gap-1.5">
@@ -26,31 +23,24 @@
         <span id="dot" class="w-2 h-2 rounded-full bg-[#ff1744] shadow-[0_0_8px_#ff1744]"></span>
         <span id="st-txt" class="text-[10px] font-bold tracking-wider uppercase truncate">E.V. CORE OFFLINE</span>
       </div>
-      <button id="sb-btn" onclick="toggleStandby()" class="bg-[#040b18]/80 border border-amber-500/60 text-amber-300 px-2.5 py-1.5 rounded-full text-[10px] font-bold">STANDBY</button>
-      <button onclick="$('key-bar').classList.toggle('hidden')" class="bg-[#040b18]/80 border border-[#ff1744]/70 text-[#ff1744] px-2.5 py-1.5 rounded-full text-[10px] font-bold">SETUP</button>
+      <button onclick="$('key-bar').classList.toggle('hidden')" class="bg-[#040b18]/80 border border-[#ff1744]/70 text-[#ff1744] px-3 py-1.5 rounded-full text-[10px] font-bold">SETUP</button>
     </div>
-    
-    <!-- SETUP & CONTACT SYNC -->
-    <div id="key-bar" class="hidden flex flex-col gap-1.5 bg-[#040b18]/95 border border-cyan-500/40 p-2.5 rounded-xl backdrop-blur-md">
-      <div class="flex gap-1.5">
-        <input id="name-in" placeholder="Name" class="w-1/3 bg-black/60 border border-[#ff1744]/40 rounded-lg px-2 py-1 text-xs text-white outline-none">
-        <input id="key-in" type="password" placeholder="Groq / Gemini Key (Optional)" class="flex-1 bg-black/60 border border-cyan-500/40 rounded-lg px-2 py-1 text-xs text-white outline-none">
-        <button onclick="saveProfile()" class="bg-[#ff1744] text-white text-[10px] font-bold px-2 rounded-lg">SAVE</button>
-      </div>
-      <button onclick="syncPhoneContacts()" class="w-full bg-cyan-700/60 hover:bg-cyan-600 border border-cyan-400/40 text-cyan-200 text-[10px] font-bold py-1.5 rounded-lg">📱 SYNC PHONE CONTACTS</button>
+    <div id="key-bar" class="hidden flex gap-1.5 bg-[#040b18]/95 border border-cyan-500/40 p-2 rounded-xl backdrop-blur-md">
+      <input id="name-in" placeholder="Name" class="w-1/3 bg-black/60 border border-[#ff1744]/40 rounded-lg px-2 py-1 text-xs text-white outline-none">
+      <input id="key-in" type="password" placeholder="Groq/Gemini Key" class="flex-1 bg-black/60 border border-cyan-500/40 rounded-lg px-2 py-1 text-xs text-white outline-none">
+      <button onclick="save()" class="bg-[#ff1744] text-white text-[10px] font-bold px-2.5 rounded-lg">SAVE</button>
     </div>
   </header>
 
   <!-- WORKSPACE & SUBTITLES -->
   <main class="relative z-10 flex flex-col justify-end gap-2 pointer-events-none my-auto w-full">
-    <div id="workspace" class="hidden pointer-events-auto max-h-[26dvh] bg-[#030916]/95 border border-cyan-500/40 rounded-xl p-2.5 overflow-y-auto text-[11px] font-mono text-cyan-300"></div>
+    <div id="workspace" class="hidden pointer-events-auto max-h-[28dvh] bg-[#030916]/95 border border-cyan-500/40 rounded-xl p-2.5 overflow-y-auto text-[11px] font-mono text-cyan-300 whitespace-pre-wrap"></div>
     <div class="pointer-events-auto bg-[#040b18]/85 border border-cyan-500/30 rounded-xl p-2.5 backdrop-blur-md">
       <div class="flex justify-between text-[9px] font-bold tracking-widest text-[#ff1744] uppercase mb-0.5">
-        <span id="u-tag">E.V. SYSTEM</span><span id="badge" class="text-cyan-400">OFF</span>
+        <span id="u-tag">E.V. LIVE NEURAL AI</span><span id="badge" class="text-cyan-400">OFF</span>
       </div>
-      <p id="sub" class="text-xs text-slate-100 line-clamp-2">"Tap below to activate."</p>
-      <!-- INSTANT APP LAUNCH PILL -->
-      <a id="app-pill" href="#" target="_blank" class="hidden mt-2 inline-flex items-center justify-center bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold py-2 px-3 rounded-lg w-full transition active:scale-95 shadow-lg"></a>
+      <p id="sub" class="text-xs text-slate-100 line-clamp-2">"Tap below to initialize."</p>
+      <a id="app-btn" href="#" class="hidden mt-2 inline-flex items-center justify-center bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-xs font-bold py-2 px-3 rounded-lg w-full shadow-lg">🚀 Launch App</a>
     </div>
   </main>
 
@@ -60,273 +50,178 @@
       <button id="mic" onclick="toggleMic()" class="flex-1 bg-gradient-to-r from-[#ff1744]/30 to-cyan-500/30 border-2 border-[#ff1744] text-white py-3 rounded-full text-xs font-bold tracking-widest uppercase active:scale-95 transition">TAP TO LINK</button>
       <button onclick="$('chat-form').classList.toggle('hidden')" class="bg-[#050d1f] border border-cyan-400/50 text-cyan-300 px-3.5 rounded-full text-xs">⌨️</button>
     </div>
-    <form id="chat-form" onsubmit="event.preventDefault(); handleInput($('chat-in').value); $('chat-in').value='';" class="hidden flex gap-1.5">
-      <input id="chat-in" placeholder="Say 'open youtube', 'call Mom', 'open camera'..." class="flex-1 bg-[#040b18] border border-cyan-400/50 rounded-full px-3 py-1.5 text-xs text-white outline-none">
+    <form id="chat-form" onsubmit="event.preventDefault();askEV($('chat-in').value);$('chat-in').value='';" class="hidden flex gap-1.5">
+      <input id="chat-in" placeholder="Say 'open camera', 'deep research AI'..." class="flex-1 bg-[#040b18] border border-cyan-400/50 rounded-full px-3 py-1.5 text-xs text-white outline-none">
       <button class="bg-[#ff1744] text-white text-[10px] font-bold px-3 rounded-full">SEND</button>
     </form>
   </footer>
 
   <script>
     const $ = id => document.getElementById(id);
-    let KEY = localStorage.getItem('ev_k') || "", NAME = localStorage.getItem('ev_n') || "";
-    let CONTACTS = JSON.parse(localStorage.getItem('ev_contacts') || "{}");
-    let state = "OFF"; // OFF, STANDBY, LISTENING, THINKING, SPEAKING
+    let KEY = localStorage.getItem('ev_k') || "", NAME = localStorage.getItem('ev_n') || "", state = "OFF", sTimer = null;
     const isDroid = /android/i.test(navigator.userAgent);
-
     $('key-in').value = KEY; $('name-in').value = NAME;
-    const syncTag = () => $('u-tag').innerText = NAME ? `E.V. // ${NAME.toUpperCase()}` : "E.V. NEURAL SYSTEM";
+    const syncTag = () => $('u-tag').innerText = NAME ? `E.V. // ${NAME.toUpperCase()}` : "E.V. SYSTEM";
     syncTag();
 
-    function saveProfile() {
+    function save() {
       KEY = $('key-in').value.trim(); NAME = $('name-in').value.trim();
       localStorage.setItem('ev_k', KEY); localStorage.setItem('ev_n', NAME);
       syncTag(); $('key-bar').classList.add('hidden');
     }
 
-    // --- ZERO-CLICK CALLING ---
-    async function syncPhoneContacts() {
-      if ('contacts' in navigator && 'select' in navigator.contacts) {
-        try {
-          const list = await navigator.contacts.select(['name', 'tel'], { multiple: true });
-          list.forEach(c => { if (c.name?.[0] && c.tel?.[0]) CONTACTS[c.name[0].toLowerCase().trim()] = c.tel[0].replace(/\s+/g, ''); });
-          localStorage.setItem('ev_contacts', JSON.stringify(CONTACTS));
-          speak(`Synced ${list.length} contacts.`);
-        } catch(e) {}
-      } else { speak("Say 'Alex's number is...' and I will remember it."); }
-      $('key-bar').classList.add('hidden');
-    }
-
-    function directCall(target) {
-      const clean = target.replace(/^(call|dial|ring)\s+(my\s+)?/i, "").trim();
-      const numOnly = clean.replace(/[^0-9+]/g, '');
-      if (numOnly.length >= 3 && clean.match(/^[0-9+\s-]+$/)) {
-        speak(`Dialing ${numOnly}.`);
-        window.location.href = `tel:${numOnly}`;
-        return true;
-      }
-      const nameKey = clean.toLowerCase();
-      let foundNum = CONTACTS[nameKey] || Object.keys(CONTACTS).find(k => k.includes(nameKey) || nameKey.includes(k)) && CONTACTS[Object.keys(CONTACTS).find(k => k.includes(nameKey) || nameKey.includes(k))];
-      if (foundNum) {
-        speak(`Calling ${clean}.`);
-        window.location.href = `tel:${foundNum}`;
-        return true;
-      }
-      speak(`I don't have ${clean}'s number. Say '${clean}'s number is...' to save it.`);
-      return true;
-    }
-
-    // --- APP LAUNCHER (Direct Navigation + Fallback Pill) ---
+    // --- OS INTENTS & APP ENGINE ---
     const APPS = {
       camera: () => { $('cam-bridge').click(); return { n: "Camera" }; },
-      photos: () => { $('gal-bridge').click(); return { n: "Photos" }; },
-      gallery: () => { $('gal-bridge').click(); return { n: "Gallery" }; },
-      calculator: () => ({ n: "Calculator", u: isDroid ? "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.APP_CALCULATOR;end" : "https://www.google.com/search?q=calculator" }),
+      photos: () => { $('gal-bridge').click(); return { n: "Gallery", u: isDroid ? "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.APP_GALLERY;end" : "photos-redirect:" }; },
+      gallery: () => APPS.photos(),
+      calculator: () => ({ n: "Calc", u: isDroid ? "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.APP_CALCULATOR;end" : "https://google.com/search?q=calculator" }),
       settings: () => ({ n: "Settings", u: isDroid ? "intent:#Intent;action=android.settings.SETTINGS;end" : "app-settings:" }),
       clock: () => ({ n: "Clock", u: isDroid ? "intent:#Intent;action=android.intent.action.SHOW_ALARMS;end" : "clock-alarm:" }),
-      whatsapp: (p) => ({ n: "WhatsApp", u: p ? `whatsapp://send?text=${encodeURIComponent(p)}` : "whatsapp://" }),
-      youtube: (p) => ({ n: "YouTube", u: p ? `https://www.youtube.com/results?search_query=${encodeURIComponent(p)}` : "https://www.youtube.com" }),
-      spotify: (p) => ({ n: "Spotify", u: p ? `https://open.spotify.com/search/${encodeURIComponent(p)}` : "https://open.spotify.com" }),
-      maps: (p) => ({ n: "Google Maps", u: p ? `https://www.google.com/maps/search/${encodeURIComponent(p)}` : "https://maps.google.com" }),
-      instagram: () => ({ n: "Instagram", u: "https://www.instagram.com" }),
-      telegram: () => ({ n: "Telegram", u: "https://t.me" }),
-      twitter: () => ({ n: "Twitter / X", u: "https://x.com" }),
-      netflix: () => ({ n: "Netflix", u: "https://www.netflix.com" }),
-      snapchat: () => ({ n: "Snapchat", u: "https://www.snapchat.com" }),
-      gmail: () => ({ n: "Gmail", u: "mailto:" }),
-      playstore: () => ({ n: "Play Store", u: "market://" })
+      alarm: () => APPS.clock(), calendar: () => ({ n: "Calendar", u: isDroid ? "content://com.android.calendar/time/" : "calshow:" }),
+      files: () => ({ n: "Files", u: isDroid ? "intent:#Intent;action=android.intent.action.OPEN_DOCUMENT;type=*/*;end" : "shareddocuments:" }),
+      call: p => ({ n: "Dialer", u: "tel:" + (p.match(/\d+/)?.[0] || "") }), phone: p => APPS.call(p), dialer: p => APPS.call(p),
+      sms: () => ({ n: "SMS", u: "sms:" }), messages: () => APPS.sms(), mail: () => ({ n: "Mail", u: "mailto:" }),
+      whatsapp: p => ({ n: "WhatsApp", u: p ? `whatsapp://send?text=${encodeURIComponent(p)}` : "whatsapp://" }),
+      youtube: p => ({ n: "YouTube", u: p ? `https://youtube.com/results?search_query=${encodeURIComponent(p)}` : "https://youtube.com" }),
+      spotify: p => ({ n: "Spotify", u: p ? `https://open.spotify.com/search/${encodeURIComponent(p)}` : "spotify://" }),
+      maps: p => ({ n: "Maps", u: p ? `https://maps.google.com/maps?q=${encodeURIComponent(p)}` : "https://maps.google.com" })
     };
+    ["amazon","chrome","discord","facebook","github","gmail","instagram","linkedin","netflix","reddit","snapchat","telegram","tiktok","twitter","uber","zomato"].forEach(a => APPS[a] = () => ({ n: a, u: `${a}://` }));
 
     function launchApp(q) {
-      const clean = q.toLowerCase().replace(/^(open|launch|start|run|play|go to)\s+(the\s+)?/i, "").trim();
-      let res = null;
-      for (const k in APPS) {
-        if (clean.includes(k)) { res = APPS[k](clean.replace(k, "").trim()); break; }
-      }
-      if (!res && /^(open|launch)\b/i.test(q)) {
-        const app = clean.split(/\s+/)[0];
-        res = { n: app.toUpperCase(), u: isDroid ? `intent:#Intent;package=com.${app};end` : `https://${app}.com` };
-      }
-      if (!res) return false;
-
-      speak(`Opening ${res.n}.`);
-      if (res.u) {
-        const pill = $('app-pill');
-        pill.href = res.u;
-        pill.innerText = `🚀 Tap to launch ${res.n} if blocked`;
-        pill.classList.remove('hidden');
-        try { window.location.href = res.u; } catch(e){}
-        setTimeout(() => pill.classList.add('hidden'), 9000);
+      const c = q.toLowerCase().replace(/^(open|launch|run|start)\s+/i,"").trim(), t = c.split(" ")[0];
+      let r = null;
+      for (const k in APPS) if (c.includes(k)) { r = APPS[k](c.replace(k,"").trim()); break; }
+      if (!r && /^(open|launch|start|run)\b/i.test(q) && t.length > 1) r = { n: t, u: isDroid ? `intent:#Intent;package=com.${t};end` : `https://${t}.com` };
+      if (!r) return false;
+      speak(`Opening ${r.n}.`);
+      if (r.u) {
+        const b = $('app-btn'); b.href = r.u; b.innerText = `🚀 Open ${r.n}`; b.classList.remove('hidden');
+        try { window.location.href = r.u; } catch(e){}
+        setTimeout(() => b.classList.add('hidden'), 8000);
       }
       return true;
     }
 
-    // --- SPEECH & INPUT PROCESSING ---
-    function handleInput(txt) {
-      if (!txt || txt.length < 2) return;
-
-      // Wake word check while in STANDBY
-      if (state === "STANDBY") {
-        if (/\b(hey\s+)?(e\.v\.|ev|evie|eve)\b/i.test(txt)) {
-          const stripped = txt.replace(/\b(hey\s+)?(e\.v\.|ev|evie|eve)\b/gi, "").trim();
-          if (stripped.length > 2) handleInput(stripped);
-          else speak(NAME ? `Online, ${NAME}.` : "E.V. online. State your command.", "LISTENING");
-          return;
-        }
-        return; // Ignore general chatter unless wake word is said
-      }
-
-      // 1. Voice contact learning (e.g. "Rahul's number is 9876543210")
-      const learn = txt.match(/([a-zA-Z]+)(?:'s)?\s*(?:number|phone)(?:\s*is)?\s*(\+?[0-9\s-]{4,15})/i);
-      if (learn) {
-        CONTACTS[learn[1].toLowerCase().trim()] = learn[2].replace(/\s+/g, '');
-        localStorage.setItem('ev_contacts', JSON.stringify(CONTACTS));
-        speak(`Saved ${learn[1]}'s number.`, "STANDBY");
-        return;
-      }
-
-      // 2. Direct Call command
-      if (/^(call|dial|ring)\s+/i.test(txt)) {
-        if (directCall(txt)) return;
-      }
-
-      // 3. App Launching
-      if (/^(open|launch|start|run|play|go to)\b/i.test(txt) || /youtube|whatsapp|spotify|maps|instagram|camera/i.test(txt)) {
-        if (launchApp(txt)) return;
-      }
-
-      // 4. Default AI Chat
-      askEV(txt);
-    }
-
-    // --- 3D ORB ---
-    let scene, cam, ren, core, pts, base;
-    const clock = new THREE.Clock();
+    // --- 3D NEURAL ORB ---
+    let scene, cam, ren, core, pts, base, clk = new THREE.Clock();
     function init3D() {
-      scene = new THREE.Scene();
-      cam = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100); cam.position.z = 2.4;
-      ren = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      ren.setSize(innerWidth, innerHeight);
-      ren.setPixelRatio(Math.min(devicePixelRatio, 2));
+      scene = new THREE.Scene(); cam = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100); cam.position.z = 2.4;
+      ren = new THREE.WebGLRenderer({ antialias: true, alpha: true }); ren.setSize(innerWidth, innerHeight); ren.setPixelRatio(Math.min(devicePixelRatio, 2));
       $('c-box').appendChild(ren.domElement);
-
-      const geo = new THREE.IcosahedronGeometry(0.65, 3);
-      base = geo.attributes.position.array.slice();
+      const geo = new THREE.IcosahedronGeometry(0.65, 3); base = geo.attributes.position.array.slice();
       core = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xff1744, wireframe: true, transparent: true, opacity: 0.8 }));
       pts = new THREE.Points(new THREE.SphereGeometry(0.8, 24, 24), new THREE.PointsMaterial({ color: 0x00e5ff, size: 0.025 }));
       scene.add(core, pts);
-
       (function loop() {
         requestAnimationFrame(loop);
-        const t = clock.getElapsedTime(), sp = state === "THINKING" ? 0.04 : (state === "SPEAKING" ? 0.02 : (state === "STANDBY" ? 0.003 : 0.007));
+        const t = clk.getElapsedTime(), s = state, sp = s==="THINKING"?0.04:(s==="SPEAKING"?0.02:(s==="STANDBY"?0.002:0.007));
         core.rotation.y += sp; pts.rotation.y -= sp * 0.7;
-        const pos = core.geometry.attributes.position, amp = state === "SPEAKING" ? 0.12 : (state === "STANDBY" ? 0.015 : 0.03);
-        for (let i = 0; i < pos.count; i++) {
-          const w = 1 + Math.sin(t * 8 + base[i * 3] * 4) * amp;
-          pos.setXYZ(i, base[i * 3] * w, base[i * 3 + 1] * w, base[i * 3 + 2] * w);
-        }
-        pos.needsUpdate = true;
-        const color = state === "STANDBY" ? 0xf59e0b : (state === "LISTENING" || state === "THINKING" ? 0x00e5ff : 0xff1744);
-        core.material.color.setHex(color);
+        const p = core.geometry.attributes.position, a = s==="SPEAKING"?0.12:(s==="STANDBY"?0.01:0.02);
+        for(let i=0; i<p.count; i++) p.setXYZ(i, base[i*3]*(1+Math.sin(t*8+base[i*3]*4)*a), base[i*3+1]*(1+Math.sin(t*8+base[i*3]*4)*a), base[i*3+2]*(1+Math.sin(t*8+base[i*3]*4)*a));
+        p.needsUpdate = true;
+        const c = s==="STANDBY"?0x8b5cf6:(s==="LISTENING"||s==="THINKING"?0x00e5ff:0xff1744);
+        core.material.color.setHex(c); pts.material.color.setHex(s==="STANDBY"?0xa78bfa:0x00e5ff);
         ren.render(scene, cam);
       })();
     }
 
-    // --- SPEECH RECOGNITION & TTS ---
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const rec = SR ? new SR() : null;
+    // --- STANDBY & SPEECH SYSTEM ---
+    const resetTimer = () => { clearTimeout(sTimer); if (state === "LISTENING") sTimer = setTimeout(() => enterStandby(), 25000); };
+    function enterStandby(notify = true) {
+      clearTimeout(sTimer); setHud("STANDBY"); $('sub').innerText = '"Standby mode. Say \'Wake up\' or tap to link."';
+      if (notify) { const u = new SpeechSynthesisUtterance("Standing by."); u.onend = () => recStart(); speechSynthesis.speak(u); }
+    }
+    function wakeUp() { setHud("LISTENING"); speak(NAME ? `Ready, ${NAME}.` : "Online and listening."); }
+
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition, rec = SR ? new SR() : null;
+    const recStart = () => { if (rec && state !== "OFF" && state !== "SPEAKING") try { rec.start(); } catch(e){} };
     if (rec) {
       rec.continuous = true;
-      rec.onresult = e => handleInput(e.results[e.results.length - 1][0].transcript.trim());
-      rec.onend = () => { if (state !== "OFF" && state !== "SPEAKING") try { rec.start(); } catch(e){} };
+      rec.onresult = e => {
+        const q = e.results[e.results.length - 1][0].transcript.trim(), l = q.toLowerCase();
+        if (state === "STANDBY") { if (/wake up|activate|online|hey ev|ev/i.test(l)) wakeUp(); return; }
+        if (/standby|go to sleep|sleep mode/i.test(l)) { enterStandby(true); return; }
+        const rMatch = l.match(/^(?:deep\s+research|research|deep\s+dive)\s+(?:on|into|about)?\s*(.+)/i);
+        if (rMatch) { deepResearch(rMatch[1]); return; }
+        if (launchApp(q)) return;
+        askEV(q);
+      };
+      rec.onend = () => recStart();
     }
 
-    function speak(txt, nextState = "STANDBY") {
-      speechSynthesis.cancel(); if (rec) try { rec.stop(); } catch(e){}
-      setHud("SPEAKING");
-      const clean = txt.replace(/```[\s\S]*?```/g, "Code displayed on screen.").replace(/[#*`_]/g, "");
+    function speak(txt) {
+      speechSynthesis.cancel(); clearTimeout(sTimer); if (rec) try { rec.stop(); } catch(e){}
+      setHud("SPEAKING"); const clean = txt.replace(/```[\s\S]*?```/g, "Code on screen.").replace(/[#*`_]/g, "");
       $('sub').innerText = `"${clean}"`;
       const u = new SpeechSynthesisUtterance(clean);
-      u.onend = u.onerror = () => { setHud(nextState); if (rec) try { rec.start(); } catch(e){} };
+      u.onend = u.onerror = () => { setHud("LISTENING"); recStart(); resetTimer(); };
       speechSynthesis.speak(u);
     }
 
-    // --- AI PIPELINE ---
+    // --- AI & DEEP RESEARCH ENGINE ---
     async function callAI(sys, q) {
       if (KEY.startsWith("AIza")) {
-        try {
-          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${KEY}`, {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contents: [{ parts: [{ text: `${sys}\nUser: ${q}` }] }] })
-          });
-          const d = await r.json();
-          if (d?.candidates?.[0]?.content?.parts?.[0]?.text) return d.candidates[0].content.parts[0].text;
-        } catch(e) {}
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${KEY}`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: `${sys}\n${q}` }] }] })
+        });
+        return (await r.json())?.candidates?.[0]?.content?.parts?.[0]?.text;
       }
       if (KEY.startsWith("gsk_")) {
-        try {
-          const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + KEY },
-            body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{ role: "system", content: sys }, { role: "user", content: q }], max_tokens: 250 })
-          });
-          const d = await r.json();
-          if (d?.choices?.[0]?.message?.content) return d.choices[0].message.content;
-        } catch(e) {}
+        const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + KEY },
+          body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{ role: "system", content: sys }, { role: "user", content: q }], max_tokens: 650 })
+        });
+        return (await r.json())?.choices?.[0]?.message?.content;
       }
-      const prompt = encodeURIComponent(`${sys} Question: ${q}`);
-      return await (await fetch(`https://text.pollinations.ai/${prompt}?model=openai`)).text();
+      return await (await fetch(`https://text.pollinations.ai/${encodeURIComponent(sys + " Question: " + q)}?model=openai`)).text();
+    }
+
+    async function deepResearch(topic) {
+      setHud("THINKING"); $('sub').innerText = `Conducting Deep Research: "${topic}"...`;
+      speechSynthesis.speak(new SpeechSynthesisUtterance(`Initiating deep research on ${topic}. Mining intelligence.`));
+      let ctx = "";
+      try {
+        const w = await (await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(topic)}&utf8=&format=json&origin=*`)).json();
+        ctx = w?.query?.search?.slice(0, 3).map(s => s.snippet.replace(/<[^>]+>/g, '')).join("\n") || "";
+      } catch(e){}
+      const sys = `You are E.V. Deep Research Agent. Build an exhaustive dossier on: "${topic}" using context: "${ctx}". Output sections: # DOSSIER: ${topic.toUpperCase()}, ## EXECUTIVE SUMMARY, ## CORE ANALYSIS, ## IMPLICATIONS. End with [BRIEFING] 2-sentence summary.`;
+      try {
+        const d = await callAI(sys, topic);
+        $('workspace').classList.remove('hidden');
+        $('workspace').innerText = d.replace(/\[BRIEFING\][\s\S]*$/, "").trim();
+        speak((d.match(/\[BRIEFING\]([\s\S]*)/i)?.[1] || `Research compiled on ${topic}.`).trim());
+      } catch(e) { speak("Deep research failed. Check connection."); }
     }
 
     async function askEV(q) {
+      if (!q) return; clearTimeout(sTimer);
+      if (/standby|go to sleep/i.test(q)) { enterStandby(true); return; }
+      const r = q.toLowerCase().match(/^(?:deep\s+research|research|deep\s+dive)\s+(?:on|into|about)?\s*(.+)/i);
+      if (r) { deepResearch(r[1]); return; }
+      if (launchApp(q)) return;
       setHud("THINKING"); $('sub').innerText = `You: "${q}"`;
-      const sys = `You are E.V., an AI voice assistant. User: ${NAME || "friend"}. Reply concisely in 1-2 plain sentences.`;
       try {
-        const ans = await callAI(sys, q);
-        if (ans.includes("```")) {
-          $('workspace').classList.remove('hidden');
-          $('workspace').innerText = ans.match(/```(?:\w+)?([\s\S]*?)```/)[1] || ans;
-        }
-        speak(ans.split("```")[0].trim(), "STANDBY");
-      } catch (e) { speak("Connection lost. Tap setup to verify key or network.", "STANDBY"); }
+        const ans = await callAI(`You are E.V. assistant. User: ${NAME || "friend"}. 1-2 concise sentences. Code in markdown.`, q);
+        if (ans.includes("```")) { $('workspace').classList.remove('hidden'); $('workspace').innerText = ans.match(/```(?:\w+)?([\s\S]*?)```/)[1] || ans; }
+        speak(ans.split("```")[0].trim());
+      } catch(e) { speak("Neural link interrupted. Tap setup."); }
     }
 
-    // --- HUD & STATE MANAGER ---
     function setHud(s) {
-      state = s;
-      const c = s === "STANDBY" ? "#f59e0b" : (s === "LISTENING" || s === "THINKING" ? "#00e5ff" : "#ff1744");
+      state = s; const c = s==="STANDBY"?"#8b5cf6":(s==="LISTENING"||s==="THINKING"?"#00e5ff":"#ff1744");
       $('hud').style.borderColor = $('mic').style.borderColor = $('dot').style.backgroundColor = c;
       $('badge').innerText = s; $('badge').style.color = c;
-
-      const map = {
-        OFF: ["E.V. OFFLINE", "TAP TO LINK"],
-        STANDBY: ["STANDBY • SAY 'HEY E.V.'", "LISTENING FOR WAKE WORD"],
-        LISTENING: ["LISTENING TO YOU...", "TALK NOW"],
-        THINKING: ["SYNTHESIZING...", "COMPUTING"],
-        SPEAKING: ["E.V. LIVE", "TAP TO INTERRUPT"]
-      };
-      [$('st-txt').innerText, $('mic').innerText] = map[s] || ["ONLINE", "LINK"];
+      $('st-txt').innerText = s==="OFF"?"E.V. CORE OFFLINE":(s==="STANDBY"?"E.V. STANDBY":(s==="SPEAKING"?"E.V. LIVE":s));
+      $('mic').innerText = s==="OFF"?"TAP TO LINK":(s==="STANDBY"?"WAKE UP":(s==="SPEAKING"?"INTERRUPT":"LISTENING..."));
     }
 
     function toggleMic() {
-      if (state === "SPEAKING") {
-        speechSynthesis.cancel();
-        setHud("LISTENING");
-        if (rec) try { rec.start(); } catch(e){}
-      } else if (state === "OFF") {
-        speak(NAME ? `Online, ${NAME}. Entering standby.` : "E.V. online. Entering standby.", "STANDBY");
-      } else {
-        setHud("LISTENING");
-        if (rec) try { rec.start(); } catch(e){}
-      }
-    }
-
-    function toggleStandby() {
-      if (state === "OFF") {
-        setHud("STANDBY");
-        if (rec) try { rec.start(); } catch(e){}
-      } else {
-        setHud(state === "STANDBY" ? "LISTENING" : "STANDBY");
-        if (rec) try { rec.start(); } catch(e){}
-      }
+      if (state === "STANDBY") wakeUp();
+      else if (state === "SPEAKING") { speechSynthesis.cancel(); setHud("LISTENING"); recStart(); resetTimer(); }
+      else if (state === "OFF") speak(NAME ? `Online, ${NAME}.` : "E.V. system online.");
+      else { setHud("LISTENING"); recStart(); resetTimer(); }
     }
 
     window.onload = () => { init3D(); setHud("OFF"); };
