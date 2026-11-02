@@ -3,6 +3,16 @@
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>E.V. AI • OS Bridge</title>
+  
+  <!-- PWA PROTOCOL & MANIFEST -->
+  <meta name="theme-color" content="#02050e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="E.V. AI">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%2302050e'/%3E%3Ccircle cx='256' cy='256' r='160' fill='none' stroke='%2300e5ff' stroke-width='24'/%3E%3Ccircle cx='256' cy='256' r='80' fill='%23ff1744'/%3E%3C/svg%3E">
+  <link rel="manifest" href='data:application/manifest+json;utf8,{"name":"E.V. AI OS Bridge","short_name":"E.V. AI","description":"E.V. Autonomous AI System","start_url":".","display":"standalone","background_color":"%2302050e","theme_color":"%2302050e","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns=\x22http://www.w3.org/2000/svg\x22 viewBox=\x220 0 512 512\x22%3E%3Crect width=\x22512\x22 height=\x22512\x22 fill=\x22%2302050e\x22/%3E%3Ccircle cx=\x22256\x22 cy=\x22256\x22 r=\x22160\x22 fill=\x22none\x22 stroke=\x22%2300e5ff\x22 stroke-width=\x2224\x22/%3E%3Ccircle cx=\x22256\x22 cy=\x22256\x22 r=\x2280\x22 fill=\x22%23ff1744\x22/%3E%3C/svg%3E","sizes":"512x512","type":"image/svg+xml","purpose":"any maskable"}]}'>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
@@ -51,18 +61,22 @@
       <button onclick="$('chat-form').classList.toggle('hidden')" class="bg-[#050d1f] border border-cyan-400/50 text-cyan-300 px-3.5 rounded-full text-xs">⌨️</button>
     </div>
     <form id="chat-form" onsubmit="event.preventDefault();askEV($('chat-in').value);$('chat-in').value='';" class="hidden flex gap-1.5">
-      <input id="chat-in" placeholder="Say 'open camera', 'deep research quantum computing'..." class="flex-1 bg-[#040b18] border border-cyan-400/50 rounded-full px-3 py-1.5 text-xs text-white outline-none">
+      <input id="chat-in" placeholder="Say 'open camera', 'deep research AI', 'install app'..." class="flex-1 bg-[#040b18] border border-cyan-400/50 rounded-full px-3 py-1.5 text-xs text-white outline-none">
       <button class="bg-[#ff1744] text-white text-[10px] font-bold px-3 rounded-full">SEND</button>
     </form>
   </footer>
 
   <script>
     const $ = id => document.getElementById(id);
-    let KEY = localStorage.getItem('ev_k') || "", NAME = localStorage.getItem('ev_n') || "", state = "OFF", sTimer = null;
+    let KEY = localStorage.getItem('ev_k') || "", NAME = localStorage.getItem('ev_n') || "", state = "OFF", sTimer = null, pwaEvt = null;
     const isDroid = /android/i.test(navigator.userAgent);
     $('key-in').value = KEY; $('name-in').value = NAME;
     const syncTag = () => $('u-tag').innerText = NAME ? `E.V. // ${NAME.toUpperCase()}` : "E.V. SYSTEM";
     syncTag();
+
+    // PWA Install Handlers
+    window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pwaEvt = e; });
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
 
     function save() {
       KEY = $('key-in').value.trim(); NAME = $('name-in').value.trim();
@@ -177,7 +191,6 @@
           if (d?.choices?.[0]?.message?.content) return d.choices[0].message.content;
         } catch(e){}
       }
-      // Direct POST API avoiding URL length limits
       const res = await fetch("https://text.pollinations.ai/", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: [{ role: "system", content: sys }, { role: "user", content: q }], model: "openai" })
@@ -214,6 +227,11 @@ Conclude with [BRIEFING] followed by a 2-sentence summary for vocal briefing.`;
     async function askEV(q) {
       if (!q) return; clearTimeout(sTimer);
       if (/standby|go to sleep|sleep mode/i.test(q)) { enterStandby(true); return; }
+      if (/^(install|download)\s+(the\s+)?(app|pwa|ev)?/i.test(q)) {
+        if (pwaEvt) { pwaEvt.prompt(); speak("Initiating installation prompt."); }
+        else speak("To install, tap your browser's share or menu button and select Add to Home Screen.");
+        return;
+      }
       const r = q.toLowerCase().match(/(?:deep\s+research|research|deep\s+dive)(?:\s+(?:on|about|into))?\s+(.+)/i);
       if (r) { deepResearch(r[1]); return; }
       if (launchApp(q)) return;
